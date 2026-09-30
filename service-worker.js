@@ -1,4 +1,4 @@
-const CACHE="norna-unified-test-v1";
+const CACHE="norna-staging-v2";
 const STATIC=[
   "./","index.html","sobre.html","como-funciona.html","aplicativo.html","acesso.html","mobile.html",
   "landing.css","public.js","auth.js","app.html","style.css","script.js","manifest.webmanifest",
