@@ -120,19 +120,38 @@ function mergeExtractedResume(x){
     if(item.name&&!data.courses.some(e=>(e.name||"").toLowerCase()===(item.name||"").toLowerCase()))data.courses.push(item);
   });
 }
-function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(",")[1]||"");r.onerror=reject;r.readAsDataURL(file)})}
+async function extractResumeTextFromFile(file){
+  const name=(file.name||"").toLowerCase();
+  if(name.endsWith(".txt")||name.endsWith(".md"))return await file.text();
+  if(name.endsWith(".pdf")){
+    if(!window.pdfjsLib)throw new Error("O leitor de PDF ainda não carregou. Atualize a página e tente novamente.");
+    pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const parts=[];
+    for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),content=await page.getTextContent();parts.push(content.items.map(x=>x.str).join(" "))}
+    return parts.join("\n");
+  }
+  if(name.endsWith(".docx")){
+    if(!window.mammoth)throw new Error("O leitor de Word ainda não carregou. Atualize a página e tente novamente.");
+    const buf=await file.arrayBuffer();
+    const result=await mammoth.extractRawText({arrayBuffer:buf});
+    return result.value||"";
+  }
+  throw new Error("Formato não suportado. Use PDF, DOCX, TXT ou MD.");
+}
 document.getElementById("resumeFile").onchange=async e=>{
   const f=e.target.files?.[0];if(!f)return;
   const status=document.getElementById("resumeImportStatus");
   status.textContent="Lendo e analisando o currículo...";
   try{
-    const b64=await fileToBase64(f);
-    const r=await fetch("/api/resume/upload",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename:f.name,content_base64:b64})});
+    const text=await extractResumeTextFromFile(f);
+    if(text.trim().length<20)throw new Error("Não consegui extrair texto suficiente desse arquivo.");
+    document.getElementById("resumeImport").value=text;
+    const r=await fetch("/api/resume/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
     const j=await r.json();
-    if(!r.ok)throw new Error(j.error||"Não foi possível ler o currículo.");
-    document.getElementById("resumeImport").value=j.text||"";
-    mergeExtractedResume(j.extracted);
-    save();renderAll();
+    if(!r.ok)throw new Error(j.error||"Não foi possível analisar o currículo.");
+    mergeExtractedResume(j.extracted);save();renderAll();
     status.textContent=`Currículo analisado: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) detectadas. Revise os dados.`;
     toast("Currículo importado.");
   }catch(err){status.textContent=err.message||"Não foi possível analisar o arquivo."}
