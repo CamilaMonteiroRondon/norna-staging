@@ -78,8 +78,8 @@ if(registerForm)registerForm.addEventListener("submit",async e=>{
   const {r,body}=await api("/api/register",{method:"POST",body:JSON.stringify({email:document.getElementById("registerEmail").value.trim(),password:p})});
   if(!r?.ok)return showApiError(body,"Não foi possível criar a conta.");
     if(body.dev_auto_verified){
-    showMessage('Conta de teste criada e confirmada. Você já pode fazer login.');
-    setTimeout(()=>showAuth('login'),1200);
+    document.getElementById("loginEmail").value=document.getElementById("registerEmail").value.trim();
+    showMessage("Conta criada e confirmada. Agora clique em “Fazer login” abaixo para entrar.");
     return;
   }
   let text="Conta criada. Confira seu e-mail para confirmar o cadastro.";
