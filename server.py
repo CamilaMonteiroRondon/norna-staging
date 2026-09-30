@@ -5,6 +5,7 @@ from urllib.request import urlopen, Request
 from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
 import base64, hashlib, hmac, html, json, os, re, secrets, smtplib, sqlite3
+from norna_extras import analyze_resume, search_jobs, search_learning
 
 BASE = Path(__file__).resolve().parent
 DB = Path(os.getenv('NORNA_DB_PATH', str(BASE / 'norna.db')))
@@ -262,27 +263,23 @@ class Handler(SimpleHTTPRequestHandler):
             if not user:
                 return
             query = (qs.get('query', [''])[0] or '').strip()
+            keyword = (qs.get('keyword', [''])[0] or '').strip()
+            role = (qs.get('role', [''])[0] or '').strip()
+            area = (qs.get('area', [''])[0] or '').strip()
+            mode = (qs.get('mode', [''])[0] or '').strip()
             days = max(1, min(60, int(qs.get('days', ['7'])[0] or 7)))
-            params = {'search': query} if query else {}
-            api_url = 'https://remotive.com/api/remote-jobs' + (('?' + urlencode(params)) if params else '')
-            try:
-                req = Request(api_url, headers={'User-Agent': 'NORNA-Portfolio/1.0'})
-                payload = json.loads(urlopen(req, timeout=18).read().decode('utf-8'))
-            except Exception as exc:
-                return self.send_json({'jobs': [], 'note': 'A fonte pública de vagas não respondeu agora.', 'error': str(exc)})
-            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-            jobs = []
-            for item in payload.get('jobs', []):
-                pub = parse_date(item.get('publication_date', ''))
-                if pub and pub < cutoff:
-                    continue
-                jobs.append({
-                    'id': item.get('id'), 'title': item.get('title', ''), 'company': item.get('company_name', ''),
-                    'location': item.get('candidate_required_location', ''), 'category': item.get('category', ''),
-                    'description': strip_html(item.get('description', ''))[:6000], 'publication_date': item.get('publication_date', ''),
-                    'url': item.get('url', ''), 'remote': True, 'source': 'Remotive'
-                })
-            return self.send_json({'jobs': jobs[:80], 'note': f'{len(jobs[:80])} vaga(s) encontradas na fonte Remotive.'})
+            result = search_jobs(query=query, keyword=keyword, role=role, area=area, mode=mode, days=days)
+            return self.send_json(result)
+
+        if path == '/api/learning':
+            user = self.require_user()
+            if not user:
+                return
+            kind = (qs.get('type', [''])[0] or '').strip()
+            mode = (qs.get('mode', [''])[0] or '').strip()
+            keyword = (qs.get('keyword', [''])[0] or '').strip()
+            price = (qs.get('price', [''])[0] or '').strip()
+            return self.send_json(search_learning(kind=kind, mode=mode, keyword=keyword, price=price))
 
         return super().do_GET()
 
@@ -401,6 +398,17 @@ class Handler(SimpleHTTPRequestHandler):
             con.commit()
             con.close()
             return self.send_json({'ok': True})
+
+        if path == '/api/resume/analyze':
+            user = self.require_user()
+            if not user:
+                return
+            text = (body.get('text') or '').strip()
+            if len(text) < 20:
+                return self.send_json({'error': 'Não consegui encontrar texto suficiente nesse currículo.'}, 400)
+            if len(text) > 120000:
+                text = text[:120000]
+            return self.send_json({'ok': True, 'extracted': analyze_resume(text)})
 
         if path == '/api/ai/coach':
             user = self.require_user()
