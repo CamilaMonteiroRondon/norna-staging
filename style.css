@@ -63,3 +63,13 @@ body.dark .dashboard-intro{background:linear-gradient(120deg,rgba(119,79,75,.12)
 .modal{background:#d8cbc2;border-color:var(--border);box-shadow:0 30px 80px rgba(58,40,35,.20)}body.dark .modal{background:var(--bg)}
 .toast{background:#795251;color:#f2e6dc}
 @media(max-width:760px){.sidebar{background:rgba(198,183,174,.95);backdrop-filter:blur(18px)}body.dark .sidebar{background:rgba(39,33,31,.95)}}
+
+
+/* Perfil clicável no topo */
+.profile-chip-button{border:1px solid var(--border);background:rgba(230,219,211,.46);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:9px;padding:5px 11px 5px 5px;border-radius:999px;text-align:left}
+.profile-chip-button:hover{border-color:rgba(128,90,85,.35);transform:translateY(-1px)}
+.profile-chip-copy{display:grid;gap:1px;min-width:0}
+.profile-chip-copy strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.profile-chip-copy small{font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+body.dark .profile-chip-button{background:rgba(255,255,255,.025)}
+@media(max-width:760px){.profile-chip-copy small{display:none}.profile-chip-copy strong{max-width:110px}}
