@@ -70,9 +70,6 @@ a{text-decoration:none;color:inherit}
   font-family:"Iowan Old Style",Baskerville,Georgia,serif;
   font-size:31px;letter-spacing:.14em;color:var(--ink);line-height:1;
 }
-.mark-text::after{
-  content:"";position:absolute;right:1.08em;top:.11em;width:.68em;height:.68em;border:1.1px solid rgba(130,97,92,.85);border-radius:50%;
-}
 .mark-text::before{
   content:"✦";position:absolute;right:1.37em;bottom:-.52em;font-size:.32em;color:#9b7670;line-height:1;
 }
@@ -475,3 +472,35 @@ a{text-decoration:none;color:inherit}
 :root{color-scheme:light;}
 .access-page,.app-auth-page{color-scheme:light!important;background:linear-gradient(155deg,#e8dfd8,#d8c9be)!important;color:#342825!important;}
 .access-page input,.app-auth-page input{color-scheme:light!important;background:#eee4dc!important;color:#342825!important;}
+
+
+/* NORNA palette lock — staging visual aprovado */
+:root{
+  --ink:#342825!important;
+  --ink-soft:#6c5a54!important;
+  --taupe:#907f78!important;
+  --rose:#9d7376!important;
+  --rose-soft:#c5a79a!important;
+  --rose-pale:#e6d7cf!important;
+  --wine:#684d49!important;
+  --sand:#d7c7bc!important;
+  --sand-2:#dfd1c7!important;
+  --paper:#eee5de!important;
+  --paper-2:#f3ece7!important;
+}
+html,body,.access-page,.app-auth-page{
+  color-scheme:light!important;
+  background:
+    radial-gradient(circle at 78% 12%,rgba(190,148,136,.12),transparent 22%),
+    radial-gradient(circle at 18% 28%,rgba(225,207,197,.20),transparent 24%),
+    linear-gradient(160deg,#e6ddd6 0%,#ddd0c6 45%,#d5c6bb 100%)!important;
+  color:#342825!important;
+}
+.access-card,.mobile-auth-card{
+  background:rgba(239,229,222,.88)!important;
+  color:#342825!important;
+}
+.access-card input,.mobile-auth-card input{
+  background:#eee4dc!important;
+  color:#342825!important;
+}
