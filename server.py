@@ -4,7 +4,7 @@ from urllib.parse import urlparse, parse_qs, urlencode
 from urllib.request import urlopen, Request
 from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
-import base64, hashlib, hmac, html, json, os, re, secrets, smtplib, sqlite3
+import base64, hashlib, hmac, html, json, os, re, secrets, smtplib, sqlite3, io
 from norna_extras import analyze_resume, search_jobs, search_learning
 
 BASE = Path(__file__).resolve().parent
@@ -153,6 +153,31 @@ def openai_text(prompt):
     except Exception as exc:
         print('Falha IA:', exc)
         return None
+
+def extract_uploaded_resume_text(filename, content_b64):
+    raw = base64.b64decode(content_b64 or '')
+    lower = (filename or '').lower()
+    if lower.endswith('.pdf'):
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(raw))
+            return '\n'.join((page.extract_text() or '') for page in reader.pages)
+        except Exception as exc:
+            raise ValueError(f'Não consegui ler este PDF: {exc}')
+    if lower.endswith('.docx'):
+        try:
+            from docx import Document
+            doc = Document(io.BytesIO(raw))
+            parts = [p.text for p in doc.paragraphs if p.text.strip()]
+            for table in doc.tables:
+                for row in table.rows:
+                    parts.append(' | '.join(cell.text.strip() for cell in row.cells if cell.text.strip()))
+            return '\n'.join(parts)
+        except Exception as exc:
+            raise ValueError(f'Não consegui ler este Word: {exc}')
+    if lower.endswith('.txt') or lower.endswith('.md'):
+        return raw.decode('utf-8', errors='ignore')
+    raise ValueError('Formato não suportado. Use PDF, DOCX, TXT ou MD.')
 
 def local_coach(data, question):
     profile = data.get('profile', {})
@@ -398,6 +423,22 @@ class Handler(SimpleHTTPRequestHandler):
             con.commit()
             con.close()
             return self.send_json({'ok': True})
+
+        if path == '/api/resume/upload':
+            user = self.require_user()
+            if not user:
+                return
+            filename = (body.get('filename') or '').strip()
+            content_b64 = body.get('content_base64') or ''
+            if not filename or not content_b64:
+                return self.send_json({'error': 'Envie um arquivo de currículo.'}, 400)
+            try:
+                text = extract_uploaded_resume_text(filename, content_b64)
+            except ValueError as exc:
+                return self.send_json({'error': str(exc)}, 400)
+            if len(text.strip()) < 20:
+                return self.send_json({'error': 'Não consegui extrair texto suficiente desse arquivo.'}, 400)
+            return self.send_json({'ok': True, 'text': text[:120000], 'extracted': analyze_resume(text[:120000])})
 
         if path == '/api/resume/analyze':
             user = self.require_user()
