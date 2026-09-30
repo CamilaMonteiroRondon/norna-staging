@@ -58,6 +58,13 @@ modal.onclick=e=>{if(e.target===modal)closeModal()};
 // PERFIL
 const pf={name:"profileName",area:"profileArea",role:"profileRole",level:"profileLevel",mode:"profileMode",location:"profileLocation",study:"profileStudy",opportunity:"profileOpportunity",about:"profileAbout"};
 document.getElementById("saveProfile").onclick=()=>{Object.entries(pf).forEach(([k,id])=>data.profile[k]=val(id));save();renderAll();toast("Perfil salvo.")};
+let profileAutosaveTimer=null;
+Object.entries(pf).forEach(([k,id])=>{
+  const el=document.getElementById(id);
+  if(!el)return;
+  const update=()=>{data.profile[k]=el.value.trim();localStorage.setItem(KEY,JSON.stringify(data));renderProfile();clearTimeout(profileAutosaveTimer);profileAutosaveTimer=setTimeout(()=>{syncData();toast("Perfil salvo automaticamente.")},500)};
+  el.addEventListener(el.tagName==="SELECT"?"change":"input",update);
+});
 document.getElementById("profilePhoto").onchange=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>1500000)return alert("Escolha uma imagem de até 1,5 MB.");const r=new FileReader();r.onload=()=>{data.profile.photo=r.result;save();renderAll();toast("Foto adicionada.")};r.readAsDataURL(f)};
 document.getElementById("removePhoto").onclick=()=>{data.profile.photo="";save();renderAll()};
 function placeholder(){return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" rx="34" fill="#c6b8af"/><circle cx="80" cy="61" r="28" fill="#9d6b66"/><path d="M35 143c4-31 22-46 45-46s41 15 45 46" fill="#9d6b66"/></svg>`)}
