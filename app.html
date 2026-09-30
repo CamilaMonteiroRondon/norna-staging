@@ -36,7 +36,7 @@
   <main class="content">
     <header class="topbar">
       <div><span>NORNA</span><h1 id="pageTitle">Dashboard</h1></div>
-      <div class="top-actions"><div class="profile-chip"><img id="topAvatar" class="avatar small" alt=""><span id="topName">Seu perfil</span></div><button id="logoutButton" class="logout-btn">Sair</button></div>
+      <div class="top-actions"><button id="topProfileChip" class="profile-chip profile-chip-button" type="button"><img id="topAvatar" class="avatar small" alt=""><span class="profile-chip-copy"><strong id="topName">Seu perfil</strong><small id="topProfileMeta">Ver meu perfil</small></span></button><button id="logoutButton" class="logout-btn">Sair</button></div>
     </header>
 
     <section id="page-dashboard" class="page active">
@@ -121,7 +121,7 @@
       </div>
 
       <div class="grid2 mt">
-        <article class="card"><span class="label">Importar currículo existente</span><h3>Trazer informações para a NORNA</h3><p class="muted">Cole texto ou importe TXT/MD. A NORNA tenta reconhecer algumas competências.</p><div class="field"><textarea id="resumeImport" class="tall" placeholder="Cole o texto do currículo..."></textarea></div><div class="actions"><input id="resumeFile" type="file" accept=".txt,.md,text/plain"><button id="analyzeResume" class="secondary">Analisar</button></div><div id="resumeImportStatus" class="empty-text"></div></article>
+        <article class="card"><span class="label">Importar currículo existente</span><h3>Trazer informações para a NORNA</h3><p class="muted">Envie PDF, Word (DOCX), TXT ou MD. A NORNA lê o currículo e preenche automaticamente formação, experiência e competências detectadas para você revisar.</p><div class="field"><textarea id="resumeImport" class="tall" placeholder="Cole o texto do currículo..."></textarea></div><div class="actions"><input id="resumeFile" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"><button id="analyzeResume" class="secondary">Analisar</button></div><div id="resumeImportStatus" class="empty-text"></div></article>
         <article class="card resume"><span class="label">Prévia automática</span><div id="resumePreview"></div></article>
       </div>
     </section>
@@ -156,7 +156,7 @@
           <div class="field"><label>Foco opcional</label><input id="learningKeyword" placeholder="Ex.: Machine Learning"></div>
           <div class="field"><label>Preço</label><select id="learningPrice"><option value="">Qualquer</option><option value="gratuito">Gratuito</option><option value="promocao">Promoção</option></select></div>
         </div>
-        <p class="muted note">A NORNA também usa as lacunas encontradas nas vagas para sugerir o que pesquisar.</p>
+        <p id="learningSearchNote" class="muted note">A NORNA mostra as opções aqui dentro. O site externo só abre quando você escolher “Ver no site oficial”.</p>
       </article>
 
       <div class="tabs mt"><button class="learning-tab active" data-learning-tab="saved">Salvas</button><button class="learning-tab" data-learning-tab="gaps">Sugestões pelo perfil</button></div>
