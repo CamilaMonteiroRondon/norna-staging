@@ -159,10 +159,20 @@ def analyze_resume(text):
     summary = " ".join(sections.get("summary", [])[:6])[:900]
     if not summary:
         summary = " ".join(sections.get("header", [])[1:6])[:650]
+    education = parse_education(sections.get("education", []))
+    experience = parse_experience(sections.get("experience", []))
+    if not education:
+        education = parse_education(lines)
+    if not experience:
+        experience = parse_experience(lines)
+    area = ""
+    if any(x in low for x in ("ciencia de dados","data science","analise de dados","data analytics","machine learning","power bi")):
+        area = "Ciência de Dados"
+    role = experience[0].get("role","") if experience else ""
     return {
-        "profile": {"name": guess_name(lines), "about": summary},
-        "education": parse_education(sections.get("education", [])),
-        "experience": parse_experience(sections.get("experience", [])),
+        "profile": {"name": guess_name(lines), "about": summary, "area": area, "role": role},
+        "education": education,
+        "experience": experience,
         "skills": unique(skills, lambda x: x.get("name","")),
         "courses": []
     }
