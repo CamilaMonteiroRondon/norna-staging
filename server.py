@@ -51,7 +51,7 @@ def sql(text):
     return text.replace('?', '%s') if DATABASE_URL else text
 
 def execute(con, statement, params=()):
-    return execute(con, sql(statement), params)
+    return con.execute(sql(statement), params)
 
 def init_db():
     con = db()
