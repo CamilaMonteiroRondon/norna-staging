@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#d9ccc2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>NORNA — Seu caminho, fio por fio</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body class="public-page home-page">
+  <canvas id="threadCanvas" aria-hidden="true"></canvas>
+
+  <header class="public-nav">
+    <a href="index.html" class="brand-link" aria-label="NORNA — página inicial">
+      <div class="norna-wordmark" aria-label="NORNA">
+        <span class="mark-text">NORNA</span>
+        <svg viewBox="0 0 310 78" aria-hidden="true">
+          <path d="M18 53 C72 6,111 70,157 38 S239 5,292 46"/>
+          <path class="thread-faint" d="M44 24 C96 67,130 10,181 41 S248 65,276 25"/>
+        </svg>
+      </div>
+    </a>
+
+    <nav class="public-links" aria-label="Navegação pública">
+      <a href="sobre.html">Sobre</a>
+      <a href="como-funciona.html">Como funciona</a>
+    </nav>
+
+    <div class="public-actions">
+      <a href="aplicativo.html" class="nav-link">Baixe o aplicativo</a>
+      <a href="acesso.html?mode=login" class="nav-link">Fazer login</a>
+      <a href="acesso.html?mode=register" class="nav-cta">Cadastre-se</a>
+    </div>
+  </header>
+
+  <main class="home-landing-clean">
+    <section class="home-hero-clean">
+      <div class="home-copy-clean">
+        <p class="overline">UMA JORNADA PROFISSIONAL QUE SE REESCREVE</p>
+        <h1>Seu caminho profissional,<br><em>fio por fio.</em></h1>
+        <p class="hero-text">A NORNA conecta o que você já construiu ao que pode vir depois — estudos, competências, vagas e formações em uma jornada que muda com você.</p>
+
+        <div class="hero-lines-copy" aria-label="Manifesto da NORNA">
+          <p>Você não precisa decidir o caminho inteiro de uma vez.</p>
+          <p>O que você aprende hoje muda as possibilidades de amanhã.</p>
+          <p class="signature-line">A NORNA acompanha essa mudança.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer home-footer-clean">
+    <p>Feito por Camila Monteiro • 2026</p>
+  </footer>
+
+  <script src="public.js"></script>
+  <script>if("serviceWorker" in navigator && !["localhost","127.0.0.1"].includes(location.hostname)){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}</script>
+</body>
+</html>

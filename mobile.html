@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#d9ccc2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Acesso — NORNA</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body class="app-auth-page access-page">
+  <canvas id="threadCanvas" aria-hidden="true"></canvas>
+
+  <main class="access-shell">
+    <a href="index.html" class="access-logo" aria-label="Voltar para a página inicial">
+      <div class="norna-wordmark">
+        <span class="mark-text">NORNA</span>
+        <svg viewBox="0 0 310 78" aria-hidden="true">
+          <path d="M18 53 C72 6,111 70,157 38 S239 5,292 46"/>
+          <path class="thread-faint" d="M44 24 C96 67,130 10,181 41 S248 65,276 25"/>
+        </svg>
+      </div>
+    </a>
+
+    <section class="access-card">
+      <div id="authMessage" class="auth-message hidden"></div>
+      <div id="authOverlay" class="mobile-auth-container open">
+        <form id="loginForm" class="auth-form">
+          <p class="form-kicker">BEM-VINDA DE VOLTA</p>
+          <h2>Continue o seu fio.</h2>
+          <p>Entre para acessar sua jornada, seus estudos e oportunidades.</p>
+          <label>E-mail<input id="loginEmail" type="email" autocomplete="email" required></label>
+          <label>Senha<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+          <button type="submit">Fazer login</button>
+          <button type="button" id="forgotLink" class="form-link">Esqueci minha senha</button>
+          <p class="switch">Ainda não tem conta? <button type="button" data-auth="register">Cadastre-se</button></p>
+        </form>
+
+        <form id="registerForm" class="auth-form hidden">
+          <p class="form-kicker">UM FIO SÓ SEU</p>
+          <h2>Crie sua conta.</h2>
+          <p>Seus dados ficam separados dos dados de qualquer outra pessoa.</p>
+          <label>E-mail<input id="registerEmail" type="email" autocomplete="email" required></label>
+          <label>Senha<input id="registerPassword" type="password" minlength="8" autocomplete="new-password" required></label>
+          <label>Confirmar senha<input id="registerPassword2" type="password" minlength="8" autocomplete="new-password" required></label>
+          <button type="submit">Cadastre-se</button>
+          <p class="switch">Já tem conta? <button type="button" data-auth="login">Fazer login</button></p>
+        </form>
+
+        <form id="forgotForm" class="auth-form hidden">
+          <p class="form-kicker">RECUPERAR ACESSO</p>
+          <h2>Esqueceu a senha?</h2>
+          <p>Digite o e-mail da sua conta e enviaremos a recuperação.</p>
+          <label>E-mail<input id="forgotEmail" type="email" required></label>
+          <button type="submit">Enviar recuperação</button>
+          <button type="button" class="form-link" data-auth="login">Voltar para login</button>
+        </form>
+
+        <form id="resetForm" class="auth-form hidden">
+          <p class="form-kicker">NOVA SENHA</p>
+          <h2>Defina uma nova senha.</h2>
+          <label>Nova senha<input id="resetPassword" type="password" minlength="8" required></label>
+          <label>Confirmar senha<input id="resetPassword2" type="password" minlength="8" required></label>
+          <button type="submit">Salvar nova senha</button>
+        </form>
+      </div>
+      <button id="closeAuth" class="hidden" aria-hidden="true"></button>
+    </section>
+
+    <a href="index.html" class="back-home">← Voltar para a página inicial</a>
+  </main>
+
+  <script src="public.js"></script>
+  <script src="auth.js"></script>
+  <script>if("serviceWorker" in navigator && !["localhost","127.0.0.1"].includes(location.hostname)){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}</script>
+</body>
+</html>

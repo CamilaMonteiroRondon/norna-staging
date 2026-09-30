@@ -1,0 +1,11 @@
+NORNA — TESTE COMPLETO EM UM UNICO LUGAR
+
+1. Dê dois cliques somente em TESTAR_NORNA.bat
+2. O navegador abrirá em http://127.0.0.1:8000
+3. Teste TUDO por esse endereço: landing, cadastro, login, perfil, cursos, vagas, currículo e aplicativo.
+
+IMPORTANTE
+- Não abra index.html, acesso.html ou outros HTML com dois cliques.
+- No modo local, o cadastro é confirmado automaticamente para você não depender de e-mail durante os testes.
+- Quando o projeto for publicado, o modo de produção poderá exigir confirmação real por e-mail via SMTP.
+- O aplicativo/PWA publicado usa a mesma paleta e os mesmos arquivos do site.

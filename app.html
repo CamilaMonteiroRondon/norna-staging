@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NORNA — Minha Jornada</title>
+  <meta name="theme-color" content="#d1c2b8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand brand-image-wrap"><div class="norna-wordmark" aria-label="NORNA"><span>NORNA</span><svg viewBox="0 0 310 78" aria-hidden="true"><path d="M18 53 C72 6, 111 70, 157 38 S239 5, 292 46"/><path class="thread-faint" d="M44 24 C96 67, 130 10, 181 41 S248 65, 276 25"/></svg></div></div>
+
+    <nav class="nav">
+      <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+      <button class="nav-btn" data-page="perfil">Meu Perfil</button>
+      <button class="nav-btn" data-page="jornada">Minha Jornada</button>
+      <button class="nav-btn" data-page="cursos">Meus Cursos</button>
+      <button class="nav-btn" data-page="competencias">Competências</button>
+      <button class="nav-btn" data-page="curriculo">Meu Currículo</button>
+      <button class="nav-btn" data-page="vagas">Vagas</button>
+      <button class="nav-btn" data-page="formacoes">Formações</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button id="themeToggle" class="text-btn">◐ Tema claro/escuro</button>
+      <button id="resetAll" class="text-btn danger">Zerar meus dados</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div><span>NORNA</span><h1 id="pageTitle">Dashboard</h1></div>
+      <div class="top-actions"><div class="profile-chip"><img id="topAvatar" class="avatar small" alt=""><span id="topName">Seu perfil</span></div><button id="logoutButton" class="logout-btn">Sair</button></div>
+    </header>
+
+    <section id="page-dashboard" class="page active">
+      <div class="intro dashboard-intro"><span class="label">BEM-VINDA À NORNA</span><h2>Seu caminho profissional, <em>fio por fio.</em></h2><p>A NORNA conecta o que você sabe, seus estudos, currículo e oportunidades — sem transformar sua trajetória em uma lista genérica.</p><div class="dashboard-thread" aria-hidden="true"></div></div>
+
+      <div class="stats">
+        <article><span>Competências</span><strong id="statSkills">0</strong></article>
+        <article><span>Cursos</span><strong id="statCourses">0</strong></article>
+        <article><span>Vagas salvas</span><strong id="statJobs">0</strong></article>
+        <article><span>Formações salvas</span><strong id="statLearning">0</strong></article>
+      </div>
+
+      <div class="grid2">
+        <article class="card"><span class="label">Objetivo profissional</span><h3 id="dashGoal">Ainda não definido</h3><p id="dashGoalText" class="muted">Complete seu perfil para começar.</p><button class="link-btn go-page" data-go="perfil">Editar perfil</button></article>
+        <article class="card"><span class="label">Próximo passo</span><h3 id="dashNext">Complete seu perfil</h3><p id="dashNextText" class="muted">A NORNA usa os seus próprios dados para organizar as próximas ações.</p></article>
+      </div>
+
+      <article class="card mt"><div class="card-head"><div><span class="label">Compatibilidade</span><h3>Oportunidades mais alinhadas</h3></div><button class="secondary go-page" data-go="vagas">Ver vagas</button></div><div class="grid2 compact"><div class="mini"><span>Melhor vaga salva</span><strong id="bestJob">Nenhuma ainda</strong></div><div class="mini"><span>Melhor formação salva</span><strong id="bestLearning">Nenhuma ainda</strong></div></div></article>
+
+      <article class="card mt"><span class="label">Resumo</span><h3>O que a NORNA já sabe sobre você</h3><div id="dashboardSummary" class="empty-text">Ainda não há dados suficientes.</div></article>
+
+      <article class="card mt ai-card"><div class="card-head"><div><span class="label">NORNA IA</span><h3>Pergunte ao seu próprio perfil</h3></div></div><p class="muted">Use a IA para interpretar seus dados, currículo, competências, cursos e oportunidades.</p><div class="ai-row"><input id="aiQuestion" placeholder="Ex.: o que está faltando no meu perfil para vagas júnior?"><button id="aiAsk" class="primary">Perguntar</button></div><div id="aiAnswer" class="ai-answer">A resposta aparece aqui.</div></article>
+    </section>
+
+    <section id="page-perfil" class="page">
+      <div class="intro"><h2>Meu Perfil</h2><p>Aqui ficam apenas sua identidade profissional, objetivo e preferências. Formação e experiência ficam no Currículo.</p></div>
+      <article class="card">
+        <div class="profile-editor">
+          <div class="photo-column">
+            <img id="profileAvatar" class="avatar large" alt="">
+            <label for="profilePhoto" class="secondary photo-btn">Adicionar foto</label>
+            <input id="profilePhoto" type="file" accept="image/*" hidden>
+            <button id="removePhoto" class="text-btn danger center">Remover foto</button>
+          </div>
+
+          <div>
+            <div class="form-grid">
+              <div class="field"><label>Nome</label><input id="profileName" placeholder="Seu nome"></div>
+              <div class="field"><label>Área desejada</label><input id="profileArea" placeholder="Ex.: Ciência de Dados"></div>
+              <div class="field"><label>Cargo / objetivo</label><input id="profileRole" placeholder="Ex.: Cientista de Dados Júnior"></div>
+              <div class="field"><label>Nível atual</label><select id="profileLevel"><option value="">Selecione</option><option>Iniciante</option><option>Júnior</option><option>Pleno</option><option>Sênior</option></select></div>
+              <div class="field"><label>Modalidade preferida</label><select id="profileMode"><option value="">Selecione</option><option>Remoto</option><option>Híbrido</option><option>Presencial</option><option>Indiferente</option></select></div>
+              <div class="field"><label>Localidade</label><input id="profileLocation" placeholder="Cidade / Estado"></div>
+              <div class="field"><label>Disponibilidade de estudo</label><input id="profileStudy" placeholder="Ex.: 2h por dia"></div>
+              <div class="field"><label>Tipo de oportunidade</label><input id="profileOpportunity" placeholder="Ex.: CLT, estágio, freelance"></div>
+            </div>
+            <div class="field"><label>Resumo profissional</label><textarea id="profileAbout" placeholder="Conte à NORNA sobre seu momento profissional, interesses e objetivos."></textarea></div>
+            <div class="actions end"><button id="saveProfile" class="primary">Salvar perfil</button></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="page-jornada" class="page">
+      <div class="intro with-action"><div><h2>Minha Jornada</h2><p>Você decide as etapas. Uma formação salva pode virar uma etapa com um clique.</p></div><button id="addJourney" class="primary">+ Adicionar etapa</button></div>
+      <div id="journeyList" class="stack"></div>
+      <div id="journeyEmpty" class="big-empty"><h3>Sua jornada está vazia</h3><p>Adicione a primeira etapa quando quiser.</p></div>
+    </section>
+
+    <section id="page-cursos" class="page">
+      <div class="intro with-action"><div><h2>Meus Cursos</h2><p>Acompanhe somente os cursos que você decidiu fazer.</p></div><button id="addCourse" class="primary">+ Adicionar curso</button></div>
+      <div class="filters"><button class="course-filter active" data-filter="Todos">Todos</button><button class="course-filter" data-filter="Quero fazer">Quero fazer</button><button class="course-filter" data-filter="Em andamento">Em andamento</button><button class="course-filter" data-filter="Concluído">Concluídos</button><button class="course-filter" data-filter="Pausado">Pausados</button></div>
+      <div id="courseList" class="cards3"></div>
+      <div id="courseEmpty" class="big-empty"><h3>Nenhum curso cadastrado</h3><p>Adicione um curso quando quiser.</p></div>
+    </section>
+
+    <section id="page-competencias" class="page">
+      <div class="intro with-action"><div><h2>Competências</h2><p>A NORNA só usa o que você cadastrar. Nada vem preenchido.</p></div><button id="addSkill" class="primary">+ Adicionar competência</button></div>
+      <div class="cards3">
+        <article class="card"><h3>Fortes</h3><div id="strongSkills" class="stack"></div><div id="strongEmpty" class="empty-text">Nenhuma ainda.</div></article>
+        <article class="card"><h3>Em desenvolvimento</h3><div id="developingSkills" class="stack"></div><div id="developingEmpty" class="empty-text">Nenhuma ainda.</div></article>
+        <article class="card"><h3>Próximas</h3><div id="nextSkills" class="stack"></div><div id="nextEmpty" class="empty-text">Nenhuma ainda.</div></article>
+      </div>
+    </section>
+
+    <section id="page-curriculo" class="page">
+      <div class="intro with-action"><div><h2>Meu Currículo</h2><p>Formação e experiência ficam aqui. A prévia usa Perfil + Currículo + Competências + Cursos.</p></div><button id="downloadResume" class="primary">Baixar currículo</button></div>
+
+      <div class="grid2">
+        <article class="card"><div class="card-head"><div><span class="label">Formação acadêmica</span><h3>Formação</h3></div><button id="addEducation" class="secondary">+ Adicionar</button></div><div id="educationList" class="stack"></div><div id="educationEmpty" class="empty-text">Nenhuma formação cadastrada.</div></article>
+        <article class="card"><div class="card-head"><div><span class="label">Histórico profissional</span><h3>Experiência</h3></div><button id="addExperience" class="secondary">+ Adicionar</button></div><div id="experienceList" class="stack"></div><div id="experienceEmpty" class="empty-text">Nenhuma experiência cadastrada.</div></article>
+      </div>
+
+      <div class="grid2 mt">
+        <article class="card"><span class="label">Importar currículo existente</span><h3>Trazer informações para a NORNA</h3><p class="muted">Cole texto ou importe TXT/MD. A NORNA tenta reconhecer algumas competências.</p><div class="field"><textarea id="resumeImport" class="tall" placeholder="Cole o texto do currículo..."></textarea></div><div class="actions"><input id="resumeFile" type="file" accept=".txt,.md,text/plain"><button id="analyzeResume" class="secondary">Analisar</button></div><div id="resumeImportStatus" class="empty-text"></div></article>
+        <article class="card resume"><span class="label">Prévia automática</span><div id="resumePreview"></div></article>
+      </div>
+    </section>
+
+    <section id="page-vagas" class="page">
+      <div class="intro"><h2>Vagas</h2><p>A NORNA compara requisitos com seu perfil. O percentual é <strong>compatibilidade estimada</strong>, não chance de contratação.</p></div>
+
+      <article class="card recommendation">
+        <div class="card-head"><div><span class="label">Descobrir oportunidades</span><h3>Que tipo de vaga você quer agora?</h3></div><button id="findJobs" class="primary">Buscar recomendações</button></div>
+        <div class="form-grid">
+          <div class="field"><label>Modalidade</label><select id="jobMode"><option value="">Usar meu perfil</option><option>Remoto</option><option>Híbrido</option><option>Presencial</option><option>Indiferente</option></select></div>
+          <div class="field"><label>Recência</label><select id="jobRecency"><option value="1">Últimas 24 horas</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></div>
+          <div class="field"><label>Compatibilidade mínima</label><select id="jobMinMatch"><option value="0">Mostrar todas</option><option value="30">30% ou mais</option><option value="50" selected>50% ou mais</option><option value="70">70% ou mais</option></select></div>
+          <div class="field"><label>Palavra-chave opcional</label><input id="jobKeyword" placeholder="Ex.: Python, BI, estágio..."></div>
+        </div>
+        <p id="jobSearchNote" class="muted note">A busca ao vivo usa uma fonte pública de vagas remotas quando disponível.</p>
+      </article>
+
+      <div class="tabs mt"><button class="tab active" data-job-tab="recommended">Recomendadas</button><button class="tab" data-job-tab="saved">Salvas</button></div>
+      <div id="recommendedJobs" class="opportunities"></div><div id="savedJobs" class="opportunities hidden"></div>
+      <div id="jobEmpty" class="big-empty"><h3>Nenhuma vaga por aqui ainda</h3><p>Use “Buscar recomendações”.</p></div>
+    </section>
+
+    <section id="page-formacoes" class="page">
+      <div class="intro"><h2>Formações</h2><p>Graduação, pós, extensão, cursos e bootcamps podem ser comparados com seu objetivo e adicionados à Jornada.</p></div>
+
+      <article class="card">
+        <div class="card-head"><div><span class="label">Descobrir aprendizado</span><h3>O que você quer procurar?</h3></div><button id="searchLearning" class="primary">Pesquisar opções</button></div>
+        <div class="form-grid">
+          <div class="field"><label>Tipo</label><select id="learningType"><option value="">Qualquer formação</option><option>Graduação</option><option>Pós-graduação</option><option>Extensão</option><option>Curso</option><option>Bootcamp</option></select></div>
+          <div class="field"><label>Modalidade</label><select id="learningMode"><option value="">Qualquer modalidade</option><option>EAD</option><option>Presencial</option><option>Híbrido</option></select></div>
+          <div class="field"><label>Foco opcional</label><input id="learningKeyword" placeholder="Ex.: Machine Learning"></div>
+          <div class="field"><label>Preço</label><select id="learningPrice"><option value="">Qualquer</option><option value="gratuito">Gratuito</option><option value="promocao">Promoção</option></select></div>
+        </div>
+        <p class="muted note">A NORNA também usa as lacunas encontradas nas vagas para sugerir o que pesquisar.</p>
+      </article>
+
+      <div class="tabs mt"><button class="learning-tab active" data-learning-tab="saved">Salvas</button><button class="learning-tab" data-learning-tab="gaps">Sugestões pelo perfil</button></div>
+      <div id="savedLearning" class="opportunities"></div><div id="learningGaps" class="opportunities hidden"></div>
+      <div id="learningEmpty" class="big-empty"><h3>Nenhuma formação salva</h3><p>Pesquise uma opção e salve para comparar depois.</p></div>
+      <div class="actions end mt"><button id="addLearning" class="secondary">+ Salvar formação manualmente</button></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="overlay"><div class="modal"><button id="modalClose" class="close">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div><div class="actions end"><button id="modalCancel" class="secondary">Cancelar</button><button id="modalSave" class="primary">Salvar</button></div></div></div>
+<div id="toast" class="toast"></div>
+<script src="script.js"></script>
+<script>if("serviceWorker" in navigator && !["localhost","127.0.0.1"].includes(location.hostname)){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}</script>
+</body>
+</html>

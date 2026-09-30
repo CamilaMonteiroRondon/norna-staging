@@ -1,0 +1,433 @@
+from pathlib import Path
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.request import urlopen, Request
+from datetime import datetime, timezone, timedelta
+from email.message import EmailMessage
+import base64, hashlib, hmac, html, json, os, re, secrets, smtplib, sqlite3
+
+BASE = Path(__file__).resolve().parent
+DB = Path(os.getenv('NORNA_DB_PATH', str(BASE / 'norna.db')))
+DEV_MODE = os.getenv('DEV_MODE', '1') == '1'
+APP_BASE_URL = os.getenv('APP_BASE_URL', '').strip().rstrip('/')
+COOKIE_SECURE = os.getenv('COOKIE_SECURE', '0') == '1'
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '').strip()
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-5.6-luna').strip()
+
+
+
+def request_base_url(handler):
+    if APP_BASE_URL:
+        return APP_BASE_URL
+    host = (handler.headers.get('X-Forwarded-Host') or handler.headers.get('Host') or '127.0.0.1:8000').strip()
+    proto = (handler.headers.get('X-Forwarded-Proto') or '').strip()
+    if not proto:
+        proto = 'http' if host.startswith(('127.0.0.1', 'localhost')) else 'https'
+    return f'{proto}://{host}'
+
+EMPTY_DATA = {
+    'profile': {'photo': '', 'name': '', 'area': '', 'role': '', 'level': '', 'mode': '', 'location': '', 'study': '', 'opportunity': '', 'about': ''},
+    'education': [], 'experience': [], 'journey': [], 'courses': [], 'skills': [], 'savedJobs': [], 'savedLearning': []
+}
+
+def db():
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
+    return con
+
+def init_db():
+    con = db()
+    cur = con.cursor()
+    cur.execute('CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,salt TEXT NOT NULL,verified INTEGER NOT NULL DEFAULT 0,verify_token TEXT,reset_token TEXT,created_at TEXT NOT NULL)')
+    cur.execute('CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id))')
+    cur.execute('CREATE TABLE IF NOT EXISTS user_data(user_id INTEGER PRIMARY KEY,data_json TEXT NOT NULL,updated_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id))')
+    con.commit()
+    con.close()
+
+def hash_password(password, salt=None):
+    salt_bytes = base64.b64decode(salt) if salt else secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac('sha256', password.encode(), salt_bytes, 240000)
+    return base64.b64encode(digest).decode(), base64.b64encode(salt_bytes).decode()
+
+def verify_password(password, stored, salt):
+    got, _ = hash_password(password, salt)
+    return hmac.compare_digest(got, stored)
+
+def valid_email(email):
+    return re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email or '') is not None
+
+def cookie_value(header, name):
+    if not header:
+        return None
+    for part in header.split(';'):
+        if '=' in part:
+            k, v = part.strip().split('=', 1)
+            if k == name:
+                return v
+    return None
+
+def user_from_handler(handler):
+    token = cookie_value(handler.headers.get('Cookie'), 'norna_session')
+    if not token:
+        return None, None
+    con = db()
+    row = con.execute('SELECT u.*,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?', (token,)).fetchone()
+    if not row:
+        con.close()
+        return None, token
+    if datetime.fromisoformat(row['expires_at']) < datetime.now(timezone.utc):
+        con.execute('DELETE FROM sessions WHERE token=?', (token,))
+        con.commit()
+        con.close()
+        return None, token
+    con.close()
+    return dict(row), token
+
+def send_email(to, subject, body):
+    host = os.getenv('SMTP_HOST', '').strip()
+    user = os.getenv('SMTP_USER', '').strip()
+    password = os.getenv('SMTP_PASSWORD', '').strip()
+    sender = os.getenv('SMTP_FROM', user).strip()
+    if not host or not sender:
+        return False
+    port = int(os.getenv('SMTP_PORT', '587'))
+    use_tls = os.getenv('SMTP_TLS', '1') == '1'
+    msg = EmailMessage()
+    msg['From'] = sender
+    msg['To'] = to
+    msg['Subject'] = subject
+    msg.set_content(body)
+    try:
+        with smtplib.SMTP(host, port, timeout=15) as smtp:
+            if use_tls:
+                smtp.starttls()
+            if user:
+                smtp.login(user, password)
+            smtp.send_message(msg)
+        return True
+    except Exception as exc:
+        print('Falha SMTP:', exc)
+        return False
+
+def strip_html(text):
+    text = re.sub(r'<[^>]+>', ' ', text or '')
+    return re.sub(r'\s+', ' ', html.unescape(text)).strip()
+
+def parse_date(value):
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+def read_json(handler):
+    try:
+        n = int(handler.headers.get('Content-Length', '0'))
+        raw = handler.rfile.read(n)
+        return json.loads(raw.decode('utf-8') or '{}')
+    except Exception:
+        return {}
+
+def openai_text(prompt):
+    if not OPENAI_API_KEY:
+        return None
+    payload = json.dumps({'model': OPENAI_MODEL, 'input': prompt}).encode('utf-8')
+    req = Request(
+        'https://api.openai.com/v1/responses',
+        data=payload,
+        headers={'Authorization': f'Bearer {OPENAI_API_KEY}', 'Content-Type': 'application/json'},
+        method='POST'
+    )
+    try:
+        with urlopen(req, timeout=45) as response:
+            obj = json.loads(response.read().decode('utf-8'))
+        pieces = []
+        for item in obj.get('output', []):
+            for content in item.get('content', []):
+                if content.get('type') in ('output_text', 'text') and content.get('text'):
+                    pieces.append(content['text'])
+        return '\n'.join(pieces).strip() or None
+    except Exception as exc:
+        print('Falha IA:', exc)
+        return None
+
+def local_coach(data, question):
+    profile = data.get('profile', {})
+    skills = data.get('skills', [])
+    courses = data.get('courses', [])
+    jobs = data.get('savedJobs', [])
+    strong = [s.get('name') for s in skills if int(s.get('level', 0) or 0) >= 70]
+    developing = [s.get('name') for s in skills if 0 < int(s.get('level', 0) or 0) < 70]
+    lines = []
+    if profile.get('role') or profile.get('area'):
+        lines.append(f"Seu foco atual é {profile.get('role') or profile.get('area')}.")
+    if strong:
+        lines.append('Pontos fortes registrados: ' + ', '.join(strong[:5]) + '.')
+    if developing:
+        lines.append('Competências em desenvolvimento: ' + ', '.join(developing[:5]) + '.')
+    if not skills:
+        lines.append('O melhor próximo passo é cadastrar suas competências para a NORNA comparar oportunidades com mais precisão.')
+    elif not courses:
+        lines.append('Você já tem competências registradas; agora vale ligar um curso ou etapa da Jornada ao que deseja desenvolver.')
+    elif not jobs:
+        lines.append('Seu perfil já tem base suficiente para testar a aba Vagas e comparar requisitos reais.')
+    else:
+        lines.append('Use as lacunas que mais se repetem nas vagas salvas como prioridade de estudo.')
+    return '\n'.join(lines)
+
+class Handler(SimpleHTTPRequestHandler):
+    server_version = 'NORNA/1.0'
+
+    def log_message(self, fmt, *args):
+        print('[NORNA]', fmt % args)
+
+    def end_headers(self):
+        if DEV_MODE:
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
+        super().end_headers()
+
+    def translate_path(self, path):
+        clean = urlparse(path).path.lstrip('/') or 'index.html'
+        target = (BASE / clean).resolve()
+        if BASE.resolve() not in target.parents and target != BASE.resolve():
+            return str(BASE / 'index.html')
+        return str(target)
+
+    def send_json(self, obj, status=200, headers=None):
+        body = json.dumps(obj, ensure_ascii=False).encode('utf-8')
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def redirect(self, url, headers=None):
+        self.send_response(302)
+        self.send_header('Location', url)
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+
+    def require_user(self):
+        user, _ = user_from_handler(self)
+        if not user:
+            self.send_json({'error': 'Sessão expirada. Entre novamente.'}, 401)
+            return None
+        return user
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        qs = parse_qs(parsed.query)
+
+        if path == '/api/health':
+            return self.send_json({'ok': True})
+
+        if path == '/api/me':
+            user, _ = user_from_handler(self)
+            if not user:
+                return self.send_json({'error': 'Não autenticado'}, 401)
+            return self.send_json({'id': user['id'], 'email': user['email']})
+
+        if path == '/api/data':
+            user = self.require_user()
+            if not user:
+                return
+            con = db()
+            row = con.execute('SELECT data_json FROM user_data WHERE user_id=?', (user['id'],)).fetchone()
+            con.close()
+            return self.send_json({'data': json.loads(row['data_json']) if row else EMPTY_DATA})
+
+        if path == '/api/verify':
+            token = (qs.get('token', [''])[0] or '').strip()
+            con = db()
+            row = con.execute('SELECT id FROM users WHERE verify_token=?', (token,)).fetchone()
+            if row:
+                con.execute('UPDATE users SET verified=1,verify_token=NULL WHERE id=?', (row['id'],))
+                con.commit()
+                con.close()
+                return self.redirect('/acesso.html?verified=1')
+            con.close()
+            return self.redirect('/acesso.html?verified=0')
+
+        if path == '/api/jobs':
+            user = self.require_user()
+            if not user:
+                return
+            query = (qs.get('query', [''])[0] or '').strip()
+            days = max(1, min(60, int(qs.get('days', ['7'])[0] or 7)))
+            params = {'search': query} if query else {}
+            api_url = 'https://remotive.com/api/remote-jobs' + (('?' + urlencode(params)) if params else '')
+            try:
+                req = Request(api_url, headers={'User-Agent': 'NORNA-Portfolio/1.0'})
+                payload = json.loads(urlopen(req, timeout=18).read().decode('utf-8'))
+            except Exception as exc:
+                return self.send_json({'jobs': [], 'note': 'A fonte pública de vagas não respondeu agora.', 'error': str(exc)})
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            jobs = []
+            for item in payload.get('jobs', []):
+                pub = parse_date(item.get('publication_date', ''))
+                if pub and pub < cutoff:
+                    continue
+                jobs.append({
+                    'id': item.get('id'), 'title': item.get('title', ''), 'company': item.get('company_name', ''),
+                    'location': item.get('candidate_required_location', ''), 'category': item.get('category', ''),
+                    'description': strip_html(item.get('description', ''))[:6000], 'publication_date': item.get('publication_date', ''),
+                    'url': item.get('url', ''), 'remote': True, 'source': 'Remotive'
+                })
+            return self.send_json({'jobs': jobs[:80], 'note': f'{len(jobs[:80])} vaga(s) encontradas na fonte Remotive.'})
+
+        return super().do_GET()
+
+    def do_PUT(self):
+        if self.path != '/api/data':
+            return self.send_json({'error': 'Rota não encontrada'}, 404)
+        user = self.require_user()
+        if not user:
+            return
+        payload = read_json(self)
+        con = db()
+        con.execute(
+            'INSERT INTO user_data(user_id,data_json,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at',
+            (user['id'], json.dumps(payload, ensure_ascii=False), datetime.now(timezone.utc).isoformat())
+        )
+        con.commit()
+        con.close()
+        return self.send_json({'ok': True})
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+        body = read_json(self)
+
+        if path == '/api/register':
+            email = (body.get('email') or '').strip().lower()
+            password = body.get('password') or ''
+            if not valid_email(email):
+                return self.send_json({'error': 'E-mail inválido.'}, 400)
+            if len(password) < 8:
+                return self.send_json({'error': 'A senha precisa ter pelo menos 8 caracteres.'}, 400)
+            password_hash, salt = hash_password(password)
+            verify_token = secrets.token_urlsafe(32)
+            con = db()
+            try:
+                cur = con.execute(
+                    'INSERT INTO users(email,password_hash,salt,verified,verify_token,created_at) VALUES(?,?,?,?,?,?)',
+                    (email, password_hash, salt, 0, verify_token, datetime.now(timezone.utc).isoformat())
+                )
+                uid = cur.lastrowid
+                con.execute('INSERT INTO user_data(user_id,data_json,updated_at) VALUES(?,?,?)', (uid, json.dumps(EMPTY_DATA), datetime.now(timezone.utc).isoformat()))
+                con.commit()
+            except sqlite3.IntegrityError:
+                con.close()
+                return self.send_json({'error': 'Já existe uma conta com este e-mail.'}, 409)
+            con.close()
+            verify_url = f'{request_base_url(self)}/api/verify?token={verify_token}'
+            if DEV_MODE:
+                # Ambiente local de teste: nao depende de e-mail/SMTP.
+                con = db()
+                con.execute('UPDATE users SET verified=1,verify_token=NULL WHERE id=?', (uid,))
+                con.commit()
+                con.close()
+                return self.send_json({'ok': True, 'dev_auto_verified': True}, 201)
+
+            sent = send_email(email, 'Confirme sua conta NORNA', f'Bem-vindo(a) à NORNA.\n\nConfirme sua conta:\n{verify_url}\n')
+            return self.send_json({'ok': True, 'email_sent': sent}, 201)
+
+        if path == '/api/login':
+            email = (body.get('email') or '').strip().lower()
+            password = body.get('password') or ''
+            con = db()
+            user = con.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+            if not user or not verify_password(password, user['password_hash'], user['salt']):
+                con.close()
+                return self.send_json({'error': 'E-mail ou senha incorretos.'}, 401)
+            if not user['verified']:
+                con.close()
+                return self.send_json({'error': 'Confirme seu e-mail antes de entrar.', 'needs_verification': True}, 403)
+            token = secrets.token_urlsafe(40)
+            expires = datetime.now(timezone.utc) + timedelta(days=30)
+            con.execute('DELETE FROM sessions WHERE user_id=?', (user['id'],))
+            con.execute('INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)', (token, user['id'], expires.isoformat()))
+            con.commit()
+            con.close()
+            cookie = f'norna_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={30*24*3600}' + ('; Secure' if COOKIE_SECURE else '')
+            return self.send_json({'ok': True}, headers={'Set-Cookie': cookie})
+
+        if path == '/api/logout':
+            _, token = user_from_handler(self)
+            con = db()
+            if token:
+                con.execute('DELETE FROM sessions WHERE token=?', (token,))
+                con.commit()
+            con.close()
+            return self.send_json({'ok': True}, headers={'Set-Cookie': 'norna_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'})
+
+        if path == '/api/forgot':
+            email = (body.get('email') or '').strip().lower()
+            con = db()
+            user = con.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()
+            result = {'message': 'Se essa conta existir, enviaremos um link de recuperação.'}
+            if user:
+                token = secrets.token_urlsafe(32)
+                con.execute('UPDATE users SET reset_token=? WHERE id=?', (token, user['id']))
+                con.commit()
+                reset_url = f'{request_base_url(self)}/acesso.html?reset={token}'
+                sent = send_email(email, 'Recupere sua senha NORNA', f'Use este link para criar uma nova senha:\n{reset_url}\n')
+                if DEV_MODE and not sent:
+                    result['dev_reset_url'] = reset_url
+            con.close()
+            return self.send_json(result)
+
+        if path == '/api/reset':
+            token = (body.get('token') or '').strip()
+            password = body.get('password') or ''
+            if len(password) < 8:
+                return self.send_json({'error': 'A senha precisa ter pelo menos 8 caracteres.'}, 400)
+            con = db()
+            user = con.execute('SELECT id FROM users WHERE reset_token=?', (token,)).fetchone()
+            if not user:
+                con.close()
+                return self.send_json({'error': 'Link inválido ou já utilizado.'}, 400)
+            password_hash, salt = hash_password(password)
+            con.execute('UPDATE users SET password_hash=?,salt=?,reset_token=NULL WHERE id=?', (password_hash, salt, user['id']))
+            con.execute('DELETE FROM sessions WHERE user_id=?', (user['id'],))
+            con.commit()
+            con.close()
+            return self.send_json({'ok': True})
+
+        if path == '/api/ai/coach':
+            user = self.require_user()
+            if not user:
+                return
+            question = (body.get('question') or '').strip()
+            if not question:
+                return self.send_json({'error': 'Escreva uma pergunta.'}, 400)
+            con = db()
+            row = con.execute('SELECT data_json FROM user_data WHERE user_id=?', (user['id'],)).fetchone()
+            con.close()
+            data = json.loads(row['data_json']) if row else EMPTY_DATA
+            prompt = (
+                'Você é a NORNA, uma assistente de carreira e aprendizado. Responda em português do Brasil, de forma curta, concreta e sem prometer contratação. '
+                'Use apenas os dados fornecidos. Diferencie compatibilidade de vaga de probabilidade de contratação.\n\nDADOS DO USUÁRIO:\n'
+                + json.dumps(data, ensure_ascii=False)[:22000]
+                + '\n\nPERGUNTA:\n' + question
+            )
+            answer = openai_text(prompt) or local_coach(data, question)
+            return self.send_json({'answer': answer, 'ai_enabled': bool(OPENAI_API_KEY)})
+
+        return self.send_json({'error': 'Rota não encontrada'}, 404)
+
+if __name__ == '__main__':
+    init_db()
+    os.chdir(BASE)
+    port = int(os.getenv('PORT', '8000'))
+    host = '0.0.0.0'
+    print(f'NORNA ouvindo em {host}:{port}')
+    ThreadingHTTPServer((host, port), Handler).serve_forever()
