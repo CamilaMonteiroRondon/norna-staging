@@ -39,10 +39,9 @@ document.querySelectorAll(".nav-btn").forEach(b=>b.onclick=()=>go(b.dataset.page
 document.querySelectorAll(".go-page").forEach(b=>b.onclick=()=>go(b.dataset.go));
 function go(page){document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));document.getElementById("page-"+page).classList.add("active");document.getElementById("pageTitle").textContent=document.querySelector(`.nav-btn[data-page="${page}"]`).textContent;renderAll()}
 
-// THEME / RESET
-document.body.classList.remove("light");
-if(localStorage.getItem(THEME)==="dark")document.body.classList.add("dark");
-document.getElementById("themeToggle").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem(THEME,document.body.classList.contains("dark")?"dark":"warm")};
+// VISUAL / RESET
+document.body.classList.remove("light","dark");
+localStorage.removeItem(THEME);
 document.getElementById("resetAll").onclick=()=>{if(confirm("Apagar todos os dados da NORNA neste navegador?")){data=emptyData();recommendedJobs=[];save();renderAll();toast("Dados zerados.")}};
 document.getElementById("logoutButton").onclick=async()=>{try{await fetch("/api/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})}catch{}localStorage.removeItem(KEY);location.href="/"};
 
