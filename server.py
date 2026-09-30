@@ -9,6 +9,13 @@ from norna_extras import analyze_resume, search_jobs, search_learning
 
 BASE = Path(__file__).resolve().parent
 DB = Path(os.getenv('NORNA_DB_PATH', str(BASE / 'norna.db')))
+DATABASE_URL = os.getenv('DATABASE_URL', '').strip()
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except Exception:
+    psycopg = None
+    dict_row = None
 DEV_MODE = os.getenv('DEV_MODE', '1') == '1'
 APP_BASE_URL = os.getenv('APP_BASE_URL', '').strip().rstrip('/')
 COOKIE_SECURE = os.getenv('COOKIE_SECURE', '0') == '1'
@@ -32,16 +39,31 @@ EMPTY_DATA = {
 }
 
 def db():
+    if DATABASE_URL:
+        if psycopg is None:
+            raise RuntimeError('DATABASE_URL foi configurado, mas psycopg não está instalado.')
+        return psycopg.connect(DATABASE_URL, row_factory=dict_row)
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
     return con
 
+def sql(text):
+    return text.replace('?', '%s') if DATABASE_URL else text
+
+def execute(con, statement, params=()):
+    return execute(con, sql(statement), params)
+
 def init_db():
     con = db()
     cur = con.cursor()
-    cur.execute('CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,salt TEXT NOT NULL,verified INTEGER NOT NULL DEFAULT 0,verify_token TEXT,reset_token TEXT,created_at TEXT NOT NULL)')
-    cur.execute('CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id))')
-    cur.execute('CREATE TABLE IF NOT EXISTS user_data(user_id INTEGER PRIMARY KEY,data_json TEXT NOT NULL,updated_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id))')
+    if DATABASE_URL:
+        cur.execute('CREATE TABLE IF NOT EXISTS users(id BIGSERIAL PRIMARY KEY,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,salt TEXT NOT NULL,verified INTEGER NOT NULL DEFAULT 0,verify_token TEXT,reset_token TEXT,created_at TEXT NOT NULL)')
+        cur.execute('CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires_at TEXT NOT NULL)')
+        cur.execute('CREATE TABLE IF NOT EXISTS user_data(user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,data_json TEXT NOT NULL,updated_at TEXT NOT NULL)')
+    else:
+        cur.execute('CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,salt TEXT NOT NULL,verified INTEGER NOT NULL DEFAULT 0,verify_token TEXT,reset_token TEXT,created_at TEXT NOT NULL)')
+        cur.execute('CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id))')
+        cur.execute('CREATE TABLE IF NOT EXISTS user_data(user_id INTEGER PRIMARY KEY,data_json TEXT NOT NULL,updated_at TEXT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id))')
     con.commit()
     con.close()
 
@@ -72,12 +94,16 @@ def user_from_handler(handler):
     if not token:
         return None, None
     con = db()
-    row = con.execute('SELECT u.*,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?', (token,)).fetchone()
+    row = execute(con, 'SELECT u.*,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?', (token,)).fetchone()
     if not row:
         con.close()
         return None, token
-    if datetime.fromisoformat(row['expires_at']) < datetime.now(timezone.utc):
-        con.execute('DELETE FROM sessions WHERE token=?', (token,))
+    expires_value = row['expires_at']
+    expires_dt = expires_value if isinstance(expires_value, datetime) else datetime.fromisoformat(str(expires_value))
+    if expires_dt.tzinfo is None:
+        expires_dt = expires_dt.replace(tzinfo=timezone.utc)
+    if expires_dt < datetime.now(timezone.utc):
+        execute(con, 'DELETE FROM sessions WHERE token=?', (token,))
         con.commit()
         con.close()
         return None, token
@@ -267,16 +293,16 @@ class Handler(SimpleHTTPRequestHandler):
             if not user:
                 return
             con = db()
-            row = con.execute('SELECT data_json FROM user_data WHERE user_id=?', (user['id'],)).fetchone()
+            row = execute(con, 'SELECT data_json FROM user_data WHERE user_id=?', (user['id'],)).fetchone()
             con.close()
             return self.send_json({'data': json.loads(row['data_json']) if row else EMPTY_DATA})
 
         if path == '/api/verify':
             token = (qs.get('token', [''])[0] or '').strip()
             con = db()
-            row = con.execute('SELECT id FROM users WHERE verify_token=?', (token,)).fetchone()
+            row = execute(con, 'SELECT id FROM users WHERE verify_token=?', (token,)).fetchone()
             if row:
-                con.execute('UPDATE users SET verified=1,verify_token=NULL WHERE id=?', (row['id'],))
+                execute(con, 'UPDATE users SET verified=1,verify_token=NULL WHERE id=?', (row['id'],))
                 con.commit()
                 con.close()
                 return self.redirect('/acesso.html?verified=1')
@@ -316,7 +342,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         payload = read_json(self)
         con = db()
-        con.execute(
+        execute(con, 
             'INSERT INTO user_data(user_id,data_json,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at',
             (user['id'], json.dumps(payload, ensure_ascii=False), datetime.now(timezone.utc).isoformat())
         )
@@ -339,22 +365,33 @@ class Handler(SimpleHTTPRequestHandler):
             verify_token = secrets.token_urlsafe(32)
             con = db()
             try:
-                cur = con.execute(
-                    'INSERT INTO users(email,password_hash,salt,verified,verify_token,created_at) VALUES(?,?,?,?,?,?)',
-                    (email, password_hash, salt, 0, verify_token, datetime.now(timezone.utc).isoformat())
-                )
-                uid = cur.lastrowid
-                con.execute('INSERT INTO user_data(user_id,data_json,updated_at) VALUES(?,?,?)', (uid, json.dumps(EMPTY_DATA), datetime.now(timezone.utc).isoformat()))
+                if DATABASE_URL:
+                    cur = execute(con,
+                        'INSERT INTO users(email,password_hash,salt,verified,verify_token,created_at) VALUES(?,?,?,?,?,?) RETURNING id',
+                        (email, password_hash, salt, 0, verify_token, datetime.now(timezone.utc).isoformat())
+                    )
+                    uid = cur.fetchone()['id']
+                else:
+                    cur = execute(con,
+                        'INSERT INTO users(email,password_hash,salt,verified,verify_token,created_at) VALUES(?,?,?,?,?,?)',
+                        (email, password_hash, salt, 0, verify_token, datetime.now(timezone.utc).isoformat())
+                    )
+                    uid = cur.lastrowid
+                execute(con, 'INSERT INTO user_data(user_id,data_json,updated_at) VALUES(?,?,?)', (uid, json.dumps(EMPTY_DATA), datetime.now(timezone.utc).isoformat()))
                 con.commit()
-            except sqlite3.IntegrityError:
+            except Exception as exc:
+                con.rollback()
                 con.close()
-                return self.send_json({'error': 'Já existe uma conta com este e-mail.'}, 409)
+                if isinstance(exc, sqlite3.IntegrityError) or (psycopg is not None and isinstance(exc, psycopg.errors.UniqueViolation)):
+                    return self.send_json({'error': 'Já existe uma conta com este e-mail.'}, 409)
+                print('Falha ao criar conta:', exc)
+                return self.send_json({'error': 'Não foi possível criar a conta agora.'}, 500)
             con.close()
             verify_url = f'{request_base_url(self)}/api/verify?token={verify_token}'
             if DEV_MODE:
                 # Ambiente local de teste: nao depende de e-mail/SMTP.
                 con = db()
-                con.execute('UPDATE users SET verified=1,verify_token=NULL WHERE id=?', (uid,))
+                execute(con, 'UPDATE users SET verified=1,verify_token=NULL WHERE id=?', (uid,))
                 con.commit()
                 con.close()
                 return self.send_json({'ok': True, 'dev_auto_verified': True}, 201)
@@ -366,7 +403,7 @@ class Handler(SimpleHTTPRequestHandler):
             email = (body.get('email') or '').strip().lower()
             password = body.get('password') or ''
             con = db()
-            user = con.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+            user = execute(con, 'SELECT * FROM users WHERE email=?', (email,)).fetchone()
             if not user or not verify_password(password, user['password_hash'], user['salt']):
                 con.close()
                 return self.send_json({'error': 'E-mail ou senha incorretos.'}, 401)
@@ -375,8 +412,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json({'error': 'Confirme seu e-mail antes de entrar.', 'needs_verification': True}, 403)
             token = secrets.token_urlsafe(40)
             expires = datetime.now(timezone.utc) + timedelta(days=30)
-            con.execute('DELETE FROM sessions WHERE user_id=?', (user['id'],))
-            con.execute('INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)', (token, user['id'], expires.isoformat()))
+            execute(con, 'DELETE FROM sessions WHERE user_id=?', (user['id'],))
+            execute(con, 'INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)', (token, user['id'], expires.isoformat()))
             con.commit()
             con.close()
             cookie = f'norna_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={30*24*3600}' + ('; Secure' if COOKIE_SECURE else '')
@@ -386,7 +423,7 @@ class Handler(SimpleHTTPRequestHandler):
             _, token = user_from_handler(self)
             con = db()
             if token:
-                con.execute('DELETE FROM sessions WHERE token=?', (token,))
+                execute(con, 'DELETE FROM sessions WHERE token=?', (token,))
                 con.commit()
             con.close()
             return self.send_json({'ok': True}, headers={'Set-Cookie': 'norna_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'})
@@ -394,11 +431,11 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/forgot':
             email = (body.get('email') or '').strip().lower()
             con = db()
-            user = con.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()
+            user = execute(con, 'SELECT id FROM users WHERE email=?', (email,)).fetchone()
             result = {'message': 'Se essa conta existir, enviaremos um link de recuperação.'}
             if user:
                 token = secrets.token_urlsafe(32)
-                con.execute('UPDATE users SET reset_token=? WHERE id=?', (token, user['id']))
+                execute(con, 'UPDATE users SET reset_token=? WHERE id=?', (token, user['id']))
                 con.commit()
                 reset_url = f'{request_base_url(self)}/acesso.html?reset={token}'
                 sent = send_email(email, 'Recupere sua senha NORNA', f'Use este link para criar uma nova senha:\n{reset_url}\n')
@@ -413,13 +450,13 @@ class Handler(SimpleHTTPRequestHandler):
             if len(password) < 8:
                 return self.send_json({'error': 'A senha precisa ter pelo menos 8 caracteres.'}, 400)
             con = db()
-            user = con.execute('SELECT id FROM users WHERE reset_token=?', (token,)).fetchone()
+            user = execute(con, 'SELECT id FROM users WHERE reset_token=?', (token,)).fetchone()
             if not user:
                 con.close()
                 return self.send_json({'error': 'Link inválido ou já utilizado.'}, 400)
             password_hash, salt = hash_password(password)
-            con.execute('UPDATE users SET password_hash=?,salt=?,reset_token=NULL WHERE id=?', (password_hash, salt, user['id']))
-            con.execute('DELETE FROM sessions WHERE user_id=?', (user['id'],))
+            execute(con, 'UPDATE users SET password_hash=?,salt=?,reset_token=NULL WHERE id=?', (password_hash, salt, user['id']))
+            execute(con, 'DELETE FROM sessions WHERE user_id=?', (user['id'],))
             con.commit()
             con.close()
             return self.send_json({'ok': True})
@@ -459,7 +496,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not question:
                 return self.send_json({'error': 'Escreva uma pergunta.'}, 400)
             con = db()
-            row = con.execute('SELECT data_json FROM user_data WHERE user_id=?', (user['id'],)).fetchone()
+            row = execute(con, 'SELECT data_json FROM user_data WHERE user_id=?', (user['id'],)).fetchone()
             con.close()
             data = json.loads(row['data_json']) if row else EMPTY_DATA
             prompt = (
