@@ -60,7 +60,27 @@ jobs:
           if(!page.url().endsWith('/app.html')) throw new Error('Sessão não persistiu após atualizar');
           if(pageErrors.length) throw new Error('Erro JS após reload: '+pageErrors.join(' | '));
 
-          console.log('SESSION FLOW OK');
+          const bodyBg=await page.evaluate(()=>getComputedStyle(document.body).backgroundColor);
+          console.log('BODY BACKGROUND:',bodyBg);
+
+          await page.click('[data-page="perfil"]');
+          await page.fill('#profileName','Camila Monteiro');
+          await page.waitForTimeout(1600);
+          const typed=await page.inputValue('#profileName');
+          console.log('PROFILE NAME:',typed);
+          if(typed!=='Camila Monteiro') throw new Error('Espaços do perfil foram alterados');
+
+          await page.reload({waitUntil:'domcontentloaded',timeout:90000});
+          await page.click('[data-page="perfil"]');
+          await page.waitForTimeout(1200);
+          const savedName=await page.inputValue('#profileName');
+          console.log('PROFILE NAME AFTER RELOAD:',savedName);
+          if(savedName!=='Camila Monteiro') throw new Error('Perfil não persistiu corretamente');
+
+          const footer=await page.textContent('.app-footer');
+          if(!footer.includes('Camila Monteiro') || !footer.includes('2026')) throw new Error('Rodapé não apareceu');
+
+          console.log('SESSION + PROFILE FLOW OK');
           await browser.close();
           EOF
           node browser-session.mjs
