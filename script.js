@@ -84,10 +84,28 @@ modal.onclick=e=>{if(e.target===modal)closeModal()};
 const pf={name:"profileName",area:"profileArea",role:"profileRole",level:"profileLevel",mode:"profileMode",location:"profileLocation",study:"profileStudy",opportunity:"profileOpportunity",about:"profileAbout"};
 document.getElementById("saveProfile").onclick=()=>{Object.entries(pf).forEach(([k,id])=>data.profile[k]=val(id));save();renderAll();toast("Perfil salvo.")};
 let profileAutosaveTimer=null;
+
+function updateProfileHeader(){
+  document.getElementById("topName").textContent=data.profile.name||"Seu perfil";
+  const meta=document.getElementById("topProfileMeta");
+  if(meta)meta.textContent=[data.profile.role,data.profile.area].filter(Boolean).join(" • ")||"Ver meu perfil";
+}
+
 Object.entries(pf).forEach(([k,id])=>{
   const el=document.getElementById(id);
   if(!el)return;
-  const update=()=>{data.profile[k]=el.value.trim();localStorage.setItem(KEY,JSON.stringify(data));renderProfile();clearTimeout(profileAutosaveTimer);profileAutosaveTimer=setTimeout(()=>{syncData();toast("Perfil salvo automaticamente.")},500)};
+
+  const update=()=>{
+    // Mantém exatamente o que a pessoa está digitando.
+    // Não redesenha o formulário a cada tecla, então espaços não somem.
+    data.profile[k]=el.value;
+    localStorage.setItem(KEY,JSON.stringify(data));
+    updateProfileHeader();
+
+    clearTimeout(profileAutosaveTimer);
+    profileAutosaveTimer=setTimeout(()=>syncData(),700);
+  };
+
   el.addEventListener(el.tagName==="SELECT"?"change":"input",update);
 });
 document.getElementById("profilePhoto").onchange=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>1500000)return alert("Escolha uma imagem de até 1,5 MB.");const r=new FileReader();r.onload=()=>{data.profile.photo=r.result;save();renderAll();toast("Foto adicionada.")};r.readAsDataURL(f)};
@@ -208,7 +226,7 @@ document.getElementById("findJobs").onclick=async()=>{
   const query=[data.profile.role,data.profile.area,keyword].filter(Boolean).join(" ");
   const note=document.getElementById("jobSearchNote");note.textContent="Buscando vagas nas fontes conectadas...";
   try{
-    const params=new URLSearchParams({query,keyword,role:data.profile.role||"",area:data.profile.area||"",mode:mode||"",days:days||"7"});
+    const params=new URLSearchParams({query,keyword,role:data.profile.role||"",area:data.profile.area||"",location:data.profile.location||"",mode:mode||"",days:days||"7"});
     const r=await fetch("/api/jobs?"+params.toString()),j=await r.json();
     if(!r.ok)throw new Error(j.error||"A busca não respondeu.");
     recommendedJobs=(j.jobs||[]).map(x=>({...x,...matchInfo(`${x.title} ${x.description||""} ${x.category||""}`)}));
