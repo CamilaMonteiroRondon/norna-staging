@@ -1,10 +1,11 @@
 
 import html
 import json
+import os
 import re
 import unicodedata
 from datetime import datetime, timezone, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 def fold(value):
@@ -213,6 +214,41 @@ def fetch_json(url):
     req = Request(url, headers={"User-Agent":"NORNA-Portfolio/1.1","Accept":"application/json"})
     with urlopen(req, timeout=18) as response:
         return json.loads(response.read().decode("utf-8"))
+
+def serper_search(query, num=10):
+    api_key = os.getenv("SERPER_API_KEY", "").strip()
+    if not api_key or not query.strip():
+        return []
+
+    payload = json.dumps({
+        "q": query.strip(),
+        "gl": "br",
+        "hl": "pt-br",
+        "num": max(1, min(20, int(num or 10)))
+    }).encode("utf-8")
+
+    req = Request(
+        "https://google.serper.dev/search",
+        data=payload,
+        method="POST",
+        headers={
+            "X-API-KEY": api_key,
+            "Content-Type": "application/json",
+            "User-Agent": "NORNA-Portfolio/1.2"
+        }
+    )
+
+    with urlopen(req, timeout=20) as response:
+        data = json.loads(response.read().decode("utf-8"))
+
+    return data.get("organic", []) or []
+
+def source_name(link):
+    try:
+        host = urlparse(link or "").netloc.lower().replace("www.", "")
+        return host or "web"
+    except Exception:
+        return "web"
 
 def parse_dt(value):
     if not value:
