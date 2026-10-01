@@ -1,35 +1,89 @@
-# NORNA — Ambiente de teste unificado
+# NORNA
 
-Durante o desenvolvimento, use somente `TESTAR_NORNA.bat`.
-Ele inicia o backend e abre `http://127.0.0.1:8000`.
+A NORNA é um projeto pessoal que criei para organizar minha jornada profissional em um só lugar.
 
-No modo local (`DEV_MODE=1`):
-- não há dependência de e-mail real para cadastrar;
-- a conta é confirmada automaticamente;
-- o navegador recebe `no-cache`, evitando CSS antigo;
-- o Service Worker/PWA não é registrado em localhost, evitando diferenças por cache.
+A ideia é reunir:
+- perfil profissional;
+- currículo;
+- competências;
+- cursos;
+- jornada de estudos;
+- vagas;
+- faculdades, pós, extensões e cursos;
+- recomendações com base no perfil da pessoa.
 
-Em produção, o site e o PWA usam a mesma base visual. O PWA abre `acesso.html?mode=login` por configuração do `manifest.webmanifest`.
+O objetivo é que a pessoa não precise procurar tudo separadamente. A NORNA usa as informações cadastradas para comparar oportunidades e mostrar o que combina mais com o perfil.
 
-# NORNA — versão refinada
+## Tecnologias
 
-## Como abrir corretamente
-Não abra `index.html` dando dois cliques no arquivo.
+Frontend:
+- HTML
+- CSS
+- JavaScript
 
-No Windows, execute:
+Backend:
+- Python
+- servidor HTTP em Python
+- PostgreSQL em produção
+- SQLite como fallback local
 
-`INICIAR_NORNA.bat`
+Bibliotecas e integrações:
+- psycopg
+- pypdf
+- python-docx
+- PDF.js
+- Mammoth.js
+- Remotive API
+- Arbeitnow API
+- Serper API opcional para busca web em tempo real
+- OpenAI API opcional para a área NORNA IA
 
-Ele abre a NORNA em `http://127.0.0.1:8000` e mantém login, cadastro, recuperação de senha e demais funções conectados ao backend.
+## Como funciona
 
-## Ajustes desta versão
-- página inicial mais limpa;
-- título em duas linhas, sem palavras empilhadas;
-- removido o NORNA que ficava solto no lado direito;
-- removida a faixa 01–05 da página inicial;
-- somente linhas/fios animados no fundo inteiro, sem bolinhas;
-- Login e Cadastro agora abrem em `acesso.html`;
-- Sobre e Como funciona continuam em páginas próprias;
-- PWA/aplicativo abre direto no acesso;
-- recuperação de senha continua disponível;
-- funções internas da NORNA foram preservadas.
+Cada pessoa cria uma conta e os dados ficam separados por usuário.
+
+Depois do login é possível preencher o perfil, importar currículo, cadastrar competências e cursos, organizar a jornada e pesquisar vagas e formações.
+
+As vagas podem vir de fontes públicas como Remotive e Arbeitnow.
+
+Quando a variável `SERPER_API_KEY` está configurada no Render, a NORNA também faz uma pesquisa web em tempo real e mostra os resultados dentro da própria plataforma. O site externo só é aberto quando a pessoa escolhe uma oportunidade.
+
+## Aplicativo Android
+
+A versão Android é distribuída em APK.
+
+Ao abrir o aplicativo, a pessoa vai direto para login/cadastro. A landing page pública não aparece dentro do app.
+
+O aplicativo usa o mesmo backend e a mesma conta da versão web.
+
+## Variáveis de ambiente
+
+No Render:
+
+```
+DATABASE_URL=
+COOKIE_SECURE=1
+DEV_MODE=1
+APP_BASE_URL=https://norna-staging.onrender.com
+SERPER_API_KEY=
+OPENAI_API_KEY=
+OPENAI_MODEL=
+```
+
+`SERPER_API_KEY` é usada para pesquisa web em tempo real.
+
+`OPENAI_API_KEY` é opcional e ativa a área de IA da NORNA.
+
+## Sobre o desenvolvimento
+
+Este é um projeto autoral criado a partir de uma necessidade que eu mesma identifiquei durante minha transição para tecnologia e dados.
+
+Eu defini a ideia, os requisitos, os fluxos, o visual, as telas, os testes e fui revisando o funcionamento de cada parte durante o desenvolvimento.
+
+Usei inteligência artificial como apoio técnico durante o projeto, principalmente em partes que ainda estou estudando, como backend, autenticação, integração com APIs, banco de dados, depuração e organização de código.
+
+A proposta do projeto também é aprender: por isso mantive HTML, CSS e JavaScript sem framework no frontend e fui acompanhando o funcionamento de cada recurso que foi implementado.
+
+## Autoria
+
+Feito por Camila Monteiro — 2026.
