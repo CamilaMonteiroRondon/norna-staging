@@ -520,3 +520,19 @@ html,body,.access-page,.app-auth-page{
   .native-app-login .auth-form h2{font-size:28px}
   .apk-download-button{width:100%}
 }
+
+
+/* final light palette */
+html,body,.access-page,.app-auth-page{
+  color-scheme:light!important;
+  background:linear-gradient(155deg,#e2d7cf 0%,#d8c9be 52%,#d0c0b5 100%)!important;
+  color:#342a27!important;
+}
+.access-card,.mobile-auth-card{
+  background:#efe5de!important;
+  color:#342a27!important;
+}
+.access-card input,.mobile-auth-card input{
+  background:#e7dbd2!important;
+  color:#342a27!important;
+}
