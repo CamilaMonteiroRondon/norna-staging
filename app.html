@@ -7,9 +7,8 @@
   <meta name="theme-color" content="#d1c2b8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20260930d">
+  <link rel="stylesheet" href="style.css?v=20261001f">
 </head>
 <body>
 <div class="app">
@@ -172,7 +171,14 @@
 <div id="toast" class="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<script src="script.js?v=20260930d"></script>
-<script>if("serviceWorker" in navigator && !["localhost","127.0.0.1"].includes(location.hostname)){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}</script>
+<script src="script.js?v=20261001f"></script>
+<script>
+      if("serviceWorker" in navigator){
+        navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+      }
+      if("caches" in window){
+        caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("norna-")).map(k=>caches.delete(k)))).catch(()=>{});
+      }
+    </script>
 </body>
 </html>
