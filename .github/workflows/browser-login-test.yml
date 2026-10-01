@@ -1,0 +1,72 @@
+name: NORNA browser login test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/browser-login-test.yml"
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Test real browser flow
+        run: |
+          cat > /tmp/test.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const base='https://norna-staging.onrender.com';
+          const email=`browser-${Date.now()}@example.com`;
+          const password='TesteNorna123!';
+
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage();
+
+          page.on('console', msg => console.log('BROWSER:', msg.type(), msg.text()));
+          page.on('pageerror', err => console.log('PAGEERROR:', err.message));
+
+          await page.goto(base+'/acesso.html?mode=register', {waitUntil:'networkidle'});
+          await page.fill('#registerEmail',email);
+          await page.fill('#registerPassword',password);
+          await page.fill('#registerPassword2',password);
+          await page.click('#registerForm button[type="submit"]');
+          await page.waitForSelector('#authMessage:not(.hidden)',{timeout:10000});
+          console.log('REGISTER MESSAGE:',await page.textContent('#authMessage'));
+
+          await page.click('#registerForm [data-auth="login"]');
+          await page.fill('#loginEmail',email);
+          await page.fill('#loginPassword',password);
+          await Promise.all([
+            page.waitForURL('**/app.html',{timeout:15000}),
+            page.click('#loginForm button[type="submit"]')
+          ]);
+
+          await page.waitForSelector('#page-dashboard',{timeout:15000});
+          await page.waitForTimeout(3000);
+          console.log('URL AFTER LOGIN:',page.url());
+          if(!page.url().includes('/app.html')) throw new Error('Foi expulso do app depois do login');
+
+          await page.reload({waitUntil:'networkidle'});
+          await page.waitForTimeout(2000);
+          console.log('URL AFTER RELOAD:',page.url());
+          if(!page.url().includes('/app.html')) throw new Error('Sessão não persistiu após atualizar');
+
+          const dashboardVisible=await page.locator('#page-dashboard').count();
+          if(!dashboardVisible) throw new Error('Dashboard não carregou');
+
+          console.log('BROWSER FLOW OK');
+          await browser.close();
+          EOF
+          node /tmp/test.mjs
