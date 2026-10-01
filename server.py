@@ -317,9 +317,10 @@ class Handler(SimpleHTTPRequestHandler):
             keyword = (qs.get('keyword', [''])[0] or '').strip()
             role = (qs.get('role', [''])[0] or '').strip()
             area = (qs.get('area', [''])[0] or '').strip()
+            location = (qs.get('location', [''])[0] or '').strip()
             mode = (qs.get('mode', [''])[0] or '').strip()
             days = max(1, min(60, int(qs.get('days', ['7'])[0] or 7)))
-            result = search_jobs(query=query, keyword=keyword, role=role, area=area, mode=mode, days=days)
+            result = search_jobs(query=query, keyword=keyword, role=role, area=area, location=location, mode=mode, days=days)
             return self.send_json(result)
 
         if path == '/api/learning':
