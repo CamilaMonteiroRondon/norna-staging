@@ -48,21 +48,5 @@ if(canvas){
   draw();
 }
 
-// PWA install action used by the application page.
-let deferredPrompt=null;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e});
-async function installNorna(){
-  if(deferredPrompt){
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt=null;
-    return true;
-  }
-  return false;
-}
-window.NORNA_INSTALL_APP=installNorna;
-const installPage=document.getElementById("installAppPage");
-if(installPage){installPage.addEventListener("click",async()=>{
-  const ok=await installNorna();
-  if(!ok)alert('Se a instalação não aparecer automaticamente, abra o menu do navegador e escolha “Adicionar à tela inicial” ou “Instalar app”.');
-});}
+// A página pública não instala a NORNA no dispositivo atual.
+// O botão "Baixar aplicativo" aponta para um APK Android real em aplicativo.html.
