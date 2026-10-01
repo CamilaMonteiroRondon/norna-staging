@@ -1,0 +1,66 @@
+name: NORNA browser session test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/browser-session-test.yml"
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Test login and reload
+        shell: bash
+        run: |
+          cat > browser-session.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          const base='https://norna-staging.onrender.com';
+          const email=`browser-session-${Date.now()}@example.com`;
+          const password='TesteNorna123!';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage();
+          page.setDefaultTimeout(60000);
+          page.setDefaultNavigationTimeout(90000);
+          const pageErrors=[];
+          page.on('pageerror', e=>pageErrors.push(e.message));
+
+          await page.goto(base+'/acesso.html?mode=register',{waitUntil:'domcontentloaded',timeout:90000});
+          await page.fill('#registerEmail',email);
+          await page.fill('#registerPassword',password);
+          await page.fill('#registerPassword2',password);
+          await page.click('#registerForm button[type="submit"]');
+          await page.waitForSelector('#authMessage:not(.hidden)');
+
+          await page.click('#registerForm [data-auth="login"]');
+          await page.fill('#loginEmail',email);
+          await page.fill('#loginPassword',password);
+          await page.click('#loginForm button[type="submit"]');
+          await page.waitForURL('**/app.html',{timeout:90000});
+          await page.waitForSelector('#page-dashboard',{timeout:60000});
+          await page.waitForTimeout(2500);
+          if(!page.url().endsWith('/app.html')) throw new Error('Saiu do app depois do login');
+          if(pageErrors.length) throw new Error('Erro JS após login: '+pageErrors.join(' | '));
+
+          await page.reload({waitUntil:'domcontentloaded',timeout:90000});
+          await page.waitForSelector('#page-dashboard',{timeout:60000});
+          await page.waitForTimeout(2500);
+          console.log('AFTER RELOAD:',page.url());
+          if(!page.url().endsWith('/app.html')) throw new Error('Sessão não persistiu após atualizar');
+          if(pageErrors.length) throw new Error('Erro JS após reload: '+pageErrors.join(' | '));
+
+          console.log('SESSION FLOW OK');
+          await browser.close();
+          EOF
+          node browser-session.mjs
