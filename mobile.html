@@ -10,11 +10,11 @@
   <link rel="icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="landing.css?v=20260930d">
 </head>
-<body class="app-auth-page access-page">
+<body class="app-auth-page access-page native-app-login">
   <canvas id="threadCanvas" aria-hidden="true"></canvas>
 
   <main class="access-shell">
-    <a href="index.html" class="access-logo" aria-label="Voltar para a página inicial">
+    <div class="access-logo app-only-logo" aria-label="NORNA">
       <div class="norna-wordmark">
         <span class="mark-text">NORNA</span>
         <svg viewBox="0 0 310 78" aria-hidden="true">
@@ -22,7 +22,7 @@
           <path class="thread-faint" d="M44 24 C96 67,130 10,181 41 S248 65,276 25"/>
         </svg>
       </div>
-    </a>
+    </div>
 
     <section class="access-card">
       <div id="authMessage" class="auth-message hidden"></div>
@@ -68,8 +68,6 @@
       </div>
       <button id="closeAuth" class="hidden" aria-hidden="true"></button>
     </section>
-
-    <a href="index.html" class="back-home">← Voltar para a página inicial</a>
   </main>
 
   <script src="public.js?v=20260930d"></script>
