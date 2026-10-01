@@ -343,3 +343,184 @@ def search_learning(kind="", mode="", keyword="", price=""):
             continue
         results.append(dict(item))
     return {"items":results,"note":str(len(results))+" opção(ões) encontrada(s) dentro da NORNA. O link só abre o site oficial quando você escolher uma opção."}
+
+# ---- Busca ao vivo opcional -------------------------------------------------
+# Estas funções sobrescrevem as versões acima quando o módulo é carregado.
+# Se SERPER_API_KEY não existir, a NORNA continua usando as fontes gratuitas.
+
+def search_jobs(query="", keyword="", role="", area="", location="", mode="", days=7):
+    days = max(1, min(60, int(days or 7)))
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    terms = search_terms(" ".join([keyword, role, area, query]))
+    jobs, sources = [], []
+
+    try:
+        payload = fetch_json("https://remotive.com/api/remote-jobs")
+        for item in payload.get("jobs", []):
+            pub = parse_dt(item.get("publication_date"))
+            if pub and pub < cutoff:
+                continue
+            jobs.append({
+                "id": "remotive-" + str(item.get("id", "")),
+                "title": item.get("title", ""),
+                "company": item.get("company_name", ""),
+                "location": item.get("candidate_required_location", ""),
+                "category": item.get("category", ""),
+                "description": strip_html(item.get("description", ""))[:6000],
+                "publication_date": item.get("publication_date", ""),
+                "url": item.get("url", ""),
+                "remote": True,
+                "source": "Remotive",
+                "tags": [item.get("category", "")]
+            })
+        sources.append("Remotive")
+    except Exception:
+        pass
+
+    try:
+        for page in range(1, 4):
+            payload = fetch_json("https://www.arbeitnow.com/api/job-board-api?page=" + str(page))
+            rows = payload.get("data", [])
+            if not rows:
+                break
+            for item in rows:
+                created = item.get("created_at")
+                pub = datetime.fromtimestamp(created, timezone.utc) if isinstance(created, (int, float)) else parse_dt(created)
+                if pub and pub < cutoff:
+                    continue
+                jobs.append({
+                    "id": "arbeitnow-" + str(item.get("slug", "")),
+                    "title": item.get("title", ""),
+                    "company": item.get("company_name", ""),
+                    "location": item.get("location", ""),
+                    "category": ", ".join(item.get("tags", [])[:3]),
+                    "description": strip_html(item.get("description", ""))[:6000],
+                    "publication_date": pub.isoformat() if pub else "",
+                    "url": item.get("url", ""),
+                    "remote": bool(item.get("remote")),
+                    "source": "Arbeitnow",
+                    "tags": item.get("tags", []) + item.get("job_types", [])
+                })
+        sources.append("Arbeitnow")
+    except Exception:
+        pass
+
+    live_web = False
+    if os.getenv("SERPER_API_KEY", "").strip():
+        try:
+            base = " ".join([role, area, keyword, query]).strip() or "emprego"
+            place = location.strip() or "Brasil"
+            mode_text = {"Remoto": "remoto", "Presencial": "presencial", "Híbrido": "híbrido"}.get(mode, "")
+            web_query = " ".join(["vaga recente", base, mode_text, place, "emprego"]).strip()
+            for item in serper_search(web_query, 15):
+                title = (item.get("title") or "").strip()
+                link = (item.get("link") or "").strip()
+                snippet = (item.get("snippet") or "").strip()
+                if not title or not link:
+                    continue
+                txt = fold(title + " " + snippet)
+                jobs.append({
+                    "id": "web-" + str(abs(hash(link))),
+                    "title": title,
+                    "company": "",
+                    "location": place,
+                    "category": "Resultado web ao vivo",
+                    "description": snippet,
+                    "publication_date": item.get("date", ""),
+                    "url": link,
+                    "remote": ("remot" in txt) or mode == "Remoto",
+                    "source": source_name(link),
+                    "tags": ["web"]
+                })
+            sources.append("Web ao vivo")
+            live_web = True
+        except Exception:
+            pass
+
+    dedup = {}
+    for job in jobs:
+        key = fold(job.get("title", "") + "|" + job.get("company", "") + "|" + job.get("url", ""))
+        if key and key not in dedup:
+            dedup[key] = job
+    jobs = list(dedup.values())
+
+    if mode == "Remoto":
+        jobs = [j for j in jobs if j.get("remote") is True or "remote" in fold(j.get("location", "") + " " + j.get("description", ""))]
+    elif mode == "Presencial":
+        jobs = [j for j in jobs if j.get("remote") is False]
+    elif mode == "Híbrido":
+        jobs = [j for j in jobs if "hybrid" in fold(j.get("description", "")) or "hibrid" in fold(j.get("description", ""))]
+
+    ranked = [(relevance(j, terms), j) for j in jobs]
+    if terms:
+        ranked = [(score, j) for score, j in ranked if score > 0]
+    ranked.sort(key=lambda pair: pair[0], reverse=True)
+    result = [j for _, j in ranked[:100]]
+    note = str(len(result)) + " vaga(s) encontrada(s). Fontes: " + (" + ".join(sources) if sources else "nenhuma") + "."
+    if not live_web:
+        note += " Para ampliar para a internet em tempo real, configure SERPER_API_KEY no Render."
+    return {"jobs": result, "sources": sources, "live_web": live_web, "note": note}
+
+def search_learning(kind="", mode="", keyword="", price=""):
+    terms = search_terms(keyword)
+    results = []
+    live_web = False
+
+    if os.getenv("SERPER_API_KEY", "").strip():
+        try:
+            price_text = "gratuito" if price == "gratuito" else ("promoção desconto bolsa" if price == "promocao" else "")
+            web_query = " ".join([kind or "curso faculdade formação", keyword, mode, price_text, "Brasil inscrição"]).strip()
+            for item in serper_search(web_query, 15):
+                title = (item.get("title") or "").strip()
+                link = (item.get("link") or "").strip()
+                snippet = (item.get("snippet") or "").strip()
+                if not title or not link:
+                    continue
+                results.append({
+                    "institution": source_name(link),
+                    "program": title,
+                    "type": kind or "Formação / Curso",
+                    "mode": mode or "Consulte no site",
+                    "link": link,
+                    "rating": "",
+                    "promo": snippet[:220],
+                    "price_kind": price or "",
+                    "topics": snippet,
+                    "source": "Web ao vivo"
+                })
+            live_web = True
+        except Exception:
+            pass
+
+    for item in LEARNING_CATALOG:
+        if kind and fold(kind) not in fold(item.get("type", "")):
+            continue
+        if mode:
+            wanted, got = fold(mode), fold(item.get("mode", ""))
+            if wanted == "ead":
+                if got not in ("ead", "online") and "online" not in got:
+                    continue
+            elif wanted not in got:
+                continue
+        if price and fold(item.get("price_kind", "")) != fold(price):
+            continue
+        hay = fold(" ".join([item.get("program", ""), item.get("institution", ""), item.get("topics", "")]))
+        if terms and not any(term in hay for term in terms):
+            continue
+        local_item = dict(item)
+        local_item["source"] = "Catálogo NORNA"
+        results.append(local_item)
+
+    dedup = {}
+    for item in results:
+        key = fold(item.get("link", "") or (item.get("program", "") + "|" + item.get("institution", "")))
+        if key and key not in dedup:
+            dedup[key] = item
+    results = list(dedup.values())[:40]
+
+    note = str(len(results)) + " opção(ões) encontrada(s) dentro da NORNA."
+    if live_web:
+        note += " A pesquisa web foi consultada agora."
+    else:
+        note += " Para pesquisar a internet em tempo real, configure SERPER_API_KEY no Render."
+    return {"items": results, "live_web": live_web, "note": note}
