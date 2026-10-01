@@ -1,0 +1,46 @@
+name: NORNA auth smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/auth-smoke.yml"
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test register, login and session
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://norna-staging.onrender.com"
+          EMAIL="norna-smoke-$(date +%s)@example.com"
+          PASS="TesteNorna123!"
+          echo "Health:"
+          curl -fsS "$BASE/api/health"
+          echo
+          echo "Register:"
+          curl -sS -D /tmp/register_headers -o /tmp/register_body             -H 'Content-Type: application/json'             -X POST "$BASE/api/register"             --data "{"email":"$EMAIL","password":"$PASS"}"
+          cat /tmp/register_headers
+          cat /tmp/register_body
+          echo
+          echo "Login:"
+          curl -sS -D /tmp/login_headers -o /tmp/login_body             -c /tmp/cookies.txt             -H 'Content-Type: application/json'             -X POST "$BASE/api/login"             --data "{"email":"$EMAIL","password":"$PASS"}"
+          cat /tmp/login_headers
+          cat /tmp/login_body
+          echo
+          echo "Cookie jar:"
+          sed 's/norna_session.*/norna_session=<redacted>/' /tmp/cookies.txt
+          echo
+          echo "Me:"
+          STATUS=$(curl -sS -o /tmp/me_body -w '%{http_code}' -b /tmp/cookies.txt "$BASE/api/me")
+          cat /tmp/me_body
+          echo
+          test "$STATUS" = "200"
+          echo "Data:"
+          STATUS2=$(curl -sS -o /tmp/data_body -w '%{http_code}' -b /tmp/cookies.txt "$BASE/api/data")
+          cat /tmp/data_body
+          echo
+          test "$STATUS2" = "200"
