@@ -5,8 +5,34 @@ let data=load(), currentCourseFilter="Todos", currentJobTab="recommended", curre
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):emptyData()}catch{return emptyData()}}
 function normalizeData(source){const base=emptyData();source=source||{};return {...base,...source,profile:{...base.profile,...(source.profile||{})},education:Array.isArray(source.education)?source.education:[],experience:Array.isArray(source.experience)?source.experience:[],journey:Array.isArray(source.journey)?source.journey:[],courses:Array.isArray(source.courses)?source.courses:[],skills:Array.isArray(source.skills)?source.skills:[],savedJobs:Array.isArray(source.savedJobs)?source.savedJobs:[],savedLearning:Array.isArray(source.savedLearning)?source.savedLearning:[]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));clearTimeout(syncTimer);syncTimer=setTimeout(syncData,220)}
-async function syncData(){try{const r=await fetch("/api/data",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});if(r.status===401)location.href="/?login=1"}catch{}}
-async function bootstrap(){try{const me=await fetch("/api/me");if(!me.ok){location.href="/?login=1";return}currentUser=await me.json();const r=await fetch("/api/data");if(!r.ok){location.href="/?login=1";return}const payload=await r.json();data=normalizeData(payload.data);localStorage.setItem(KEY,JSON.stringify(data));renderAll()}catch{location.href="/?login=1"}}
+async function syncData(){
+  try{
+    const r=await fetch("/api/data",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+    if(r.status===401){location.replace("/acesso.html?mode=login");return}
+    if(!r.ok)console.error("Falha ao salvar dados NORNA:",r.status);
+  }catch(err){console.error("Falha de rede ao salvar dados NORNA:",err)}
+}
+async function bootstrap(){
+  try{
+    const me=await fetch("/api/me");
+    if(me.status===401){location.replace("/acesso.html?mode=login");return}
+    if(!me.ok)throw new Error("Falha ao validar a sessão: "+me.status);
+    currentUser=await me.json();
+
+    const r=await fetch("/api/data");
+    if(r.status===401){location.replace("/acesso.html?mode=login");return}
+    if(!r.ok)throw new Error("Falha ao carregar os dados: "+r.status);
+
+    const payload=await r.json();
+    data=normalizeData(payload.data);
+    localStorage.setItem(KEY,JSON.stringify(data));
+    renderAll();
+  }catch(err){
+    console.error("Erro ao iniciar a NORNA:",err);
+    const t=document.getElementById("toast");
+    if(t){t.textContent="Sua sessão continua ativa, mas houve um erro ao carregar a interface. Atualize a página.";t.classList.add("show")}
+  }
+}
 function esc(v=""){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
 function val(id){return document.getElementById(id).value.trim()}
 function clamp(v){return Math.min(100,Math.max(0,Number(v)||0))}
