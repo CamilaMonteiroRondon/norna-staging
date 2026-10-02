@@ -6,7 +6,7 @@ import re
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, urljoin
 from urllib.request import Request, urlopen
 
 def fold(value):
@@ -343,6 +343,165 @@ def fetch_json(url):
     with urlopen(req, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
 
+def fetch_text(url):
+    req = Request(
+        url,
+        headers={
+            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154 Safari/537.36",
+            "Accept":"text/html,application/xhtml+xml"
+        }
+    )
+    with urlopen(req, timeout=10) as response:
+        return response.read().decode("utf-8", "ignore")
+
+def url_slug(value):
+    text = fold(value)
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-")
+
+def find_jobposting_jsonld(node):
+    if isinstance(node, dict):
+        kind = node.get("@type")
+        kinds = kind if isinstance(kind, list) else [kind]
+        if any(fold(x) == "jobposting" for x in kinds if x):
+            return node
+        for value in node.values():
+            found = find_jobposting_jsonld(value)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for value in node:
+            found = find_jobposting_jsonld(value)
+            if found:
+                return found
+    return None
+
+def vagas_job_from_html(page_html, page_url):
+    if not page_html:
+        return None
+
+    plain = strip_html(page_html)
+    plain_fold = fold(plain)
+    if "inscricoes estao encerradas" in plain_fold or "vaga esta indisponivel" in plain_fold:
+        return None
+
+    job = None
+    for raw in re.findall(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        page_html,
+        flags=re.I | re.S
+    ):
+        try:
+            data = json.loads(html.unescape(raw).strip())
+            job = find_jobposting_jsonld(data)
+            if job:
+                break
+        except Exception:
+            pass
+
+    def clean(value):
+        return strip_html(value) if isinstance(value, str) else ""
+
+    if job:
+        title = clean(job.get("title"))
+        organization = job.get("hiringOrganization") or {}
+        company = clean(organization.get("name")) if isinstance(organization, dict) else ""
+        description = clean(job.get("description"))
+        published = str(job.get("datePosted") or "")
+        employment = job.get("employmentType") or ""
+        if isinstance(employment, list):
+            employment = " • ".join(str(x) for x in employment[:3])
+
+        locations = job.get("jobLocation") or []
+        if isinstance(locations, dict):
+            locations = [locations]
+        location_parts = []
+        for loc in locations:
+            if not isinstance(loc, dict):
+                continue
+            address = loc.get("address") or {}
+            if not isinstance(address, dict):
+                continue
+            place = ", ".join(
+                str(x).strip()
+                for x in [
+                    address.get("addressLocality"),
+                    address.get("addressRegion"),
+                    address.get("addressCountry")
+                ]
+                if x
+            )
+            if place and place not in location_parts:
+                location_parts.append(place)
+        location_text = " • ".join(location_parts[:2]) or "Brasil"
+
+        job_location_type = fold(job.get("jobLocationType") or "")
+        text_for_mode = fold(" ".join([title, description, location_text, str(job.get("jobLocationType") or "")]))
+        if "telecommute" in job_location_type or "100% home office" in text_for_mode or "remot" in text_for_mode:
+            workplace = "remote"
+        elif "home office" in text_for_mode or "hibrid" in text_for_mode or "hybrid" in text_for_mode:
+            workplace = "hybrid"
+        else:
+            workplace = "on-site"
+
+        salary = ""
+        base_salary = job.get("baseSalary")
+        if isinstance(base_salary, dict):
+            value = base_salary.get("value") or {}
+            currency = base_salary.get("currency") or ""
+            if isinstance(value, dict):
+                minimum = value.get("minValue")
+                maximum = value.get("maxValue")
+                unit = value.get("unitText") or ""
+                salary = " ".join(str(x) for x in [minimum, maximum, currency, unit] if x)
+
+        if not title:
+            return None
+
+        return {
+            "id": "vagas-" + str(abs(hash(page_url))),
+            "title": title,
+            "company": company,
+            "location": location_text,
+            "category": str(employment or "Vaga no Brasil"),
+            "description": description[:6000],
+            "publication_date": published,
+            "url": page_url,
+            "remote": workplace == "remote",
+            "workplace_type": workplace,
+            "source": "Vagas.com.br",
+            "market": "Brasil",
+            "tags": ["Brasil", "Vagas.com.br", workplace],
+            "salary": salary
+        }
+
+    # Conservative fallback when structured data is missing.
+    h1 = re.search(r"<h1[^>]*>(.*?)</h1>", page_html, flags=re.I | re.S)
+    h2 = re.search(r"<h2[^>]*>(.*?)</h2>", page_html, flags=re.I | re.S)
+    title = strip_html(h1.group(1)) if h1 else ""
+    company = strip_html(h2.group(1)) if h2 else ""
+    if not title:
+        return None
+
+    text_for_mode = fold(plain)
+    workplace = "remote" if ("100% home office" in text_for_mode or "remot" in text_for_mode) else ("hybrid" if ("home office" in text_for_mode or "hibrid" in text_for_mode) else "on-site")
+    return {
+        "id": "vagas-" + str(abs(hash(page_url))),
+        "title": title,
+        "company": company,
+        "location": "Brasil",
+        "category": "Vaga no Brasil",
+        "description": plain[:6000],
+        "publication_date": "",
+        "url": page_url,
+        "remote": workplace == "remote",
+        "workplace_type": workplace,
+        "source": "Vagas.com.br",
+        "market": "Brasil",
+        "tags": ["Brasil", "Vagas.com.br", workplace],
+        "salary": ""
+    }
+
 def serper_search(query, num=10):
     api_key = os.getenv("SERPER_API_KEY", "").strip()
     if not api_key or not query.strip():
@@ -409,9 +568,6 @@ def is_specific_job_result(link, title=""):
 
     detail_patterns = (
         "linkedin.com/jobs/view/",
-        "jobs.gupy.io/jobs/",
-        ".gupy.io/job/",
-        "gupy.io/job/",
         "br.indeed.com/viewjob",
         "indeed.com/viewjob",
         "greenhouse.io/jobs/",
@@ -769,144 +925,66 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
         return "Jobicy Brasil", rows
 
-    def gupy_brazil_provider():
-        rows = []
+    def vagas_com_brazil_provider():
+        # No key required. Search Vagas.com.br and keep only individual job pages.
+        search_values = []
+        for value in [keyword, query, role, area]:
+            value = (value or "").strip()
+            if value and fold(value) not in {fold(x) for x in search_values}:
+                search_values.append(value)
 
-        # Gupy exposes a public employability search used by its own job portal.
-        # It works without a private employer token and covers remote, hybrid and on-site jobs in Brazil.
-        search_term = (keyword or query or role or area or "dados").strip()
-        terms_to_try = [search_term]
-        simplified = re.sub(r"\b(junior|júnior|jr\.?|pleno|senior|sênior|sr\.?)\b", "", search_term, flags=re.I)
-        simplified = re.sub(r"\s+", " ", simplified).strip()
-        if simplified and fold(simplified) != fold(search_term):
-            terms_to_try.append(simplified)
-        if area and fold(area) not in {fold(x) for x in terms_to_try}:
-            terms_to_try.append(area.strip())
+        if role:
+            simplified = re.sub(r"\b(junior|júnior|jr\.?|pleno|senior|sênior|sr\.?)\b", "", role, flags=re.I)
+            simplified = re.sub(r"\s+", " ", simplified).strip()
+            if simplified and fold(simplified) not in {fold(x) for x in search_values}:
+                search_values.append(simplified)
 
-        mode_map = {
-            "Remoto": "remote",
-            "Híbrido": "hybrid",
-            "Presencial": "on-site"
-        }
+        if not search_values:
+            search_values = ["dados"]
 
-        payload = None
-        used_term = ""
-        for term in terms_to_try[:3]:
-            params = {
-                "jobName": term,
-                "offset": 0,
-                "limit": 60
-            }
-            if mode in mode_map:
-                params["workplaceType"] = mode_map[mode]
-
+        detail_links = []
+        for value in search_values[:3]:
+            slug = url_slug(value)
+            if not slug:
+                continue
+            search_url = "https://www.vagas.com.br/vagas-de-" + slug + "?ordenar_por=mais_recentes"
             try:
-                candidate = fetch_json(
-                    "https://employability-portal.gupy.io/api/v1/jobs?" + urlencode(params)
-                )
+                page_html = fetch_text(search_url)
             except Exception:
                 continue
 
-            possible = []
-            if isinstance(candidate, list):
-                possible = candidate
-            elif isinstance(candidate, dict):
-                possible = (
-                    candidate.get("data")
-                    or candidate.get("results")
-                    or candidate.get("jobs")
-                    or candidate.get("items")
-                    or []
-                )
-
-            if possible:
-                payload = possible
-                used_term = term
+            matches = re.findall(
+                r'href=["\']((?:https?://(?:www\.)?vagas\.com\.br)?/vagas/v\d+/[^"\'#?]+)',
+                page_html,
+                flags=re.I
+            )
+            for href in matches:
+                url = urljoin("https://www.vagas.com.br", html.unescape(href))
+                if url not in detail_links:
+                    detail_links.append(url)
+                if len(detail_links) >= 18:
+                    break
+            if len(detail_links) >= 18:
                 break
 
-        for item in payload or []:
-            title = (item.get("name") or item.get("title") or "").strip()
-            if not title:
-                continue
+        rows = []
+        if detail_links:
+            with ThreadPoolExecutor(max_workers=min(6, len(detail_links))) as pool:
+                future_map = {pool.submit(fetch_text, url): url for url in detail_links}
+                for future in as_completed(future_map):
+                    url = future_map[future]
+                    try:
+                        item = vagas_job_from_html(future.result(), url)
+                    except Exception:
+                        item = None
+                    if not item:
+                        continue
+                    pub = parse_dt(item.get("publication_date"))
+                    if pub and pub < cutoff:
+                        continue
+                    rows.append(item)
 
-            career_page = item.get("careerPage") or {}
-            company_obj = item.get("company") or {}
-
-            company = (
-                item.get("careerPageName")
-                or career_page.get("name")
-                or company_obj.get("name")
-                or ""
-            )
-
-            city = item.get("addressCity") or item.get("city") or ""
-            state = item.get("addressStateShortName") or item.get("stateCode") or item.get("addressState") or item.get("state") or ""
-            country = item.get("addressCountry") or item.get("country") or "Brasil"
-            location_text = ", ".join([x for x in [city, state, country] if x]) or "Brasil"
-
-            workplace = (item.get("workplaceType") or "").strip()
-            workplace_label = {
-                "remote": "Remoto",
-                "hybrid": "Híbrido",
-                "on-site": "Presencial"
-            }.get(workplace, workplace or "Não informado")
-
-            description = strip_html(
-                item.get("description")
-                or item.get("descriptionHtml")
-                or ""
-            )
-            prerequisites = strip_html(
-                item.get("prerequisites")
-                or item.get("requirements")
-                or ""
-            )
-            responsibilities = strip_html(
-                item.get("responsibilities")
-                or ""
-            )
-
-            published = item.get("publishedAt") or item.get("publishedDate") or ""
-            pub = parse_dt(published)
-            if pub and pub < cutoff:
-                continue
-
-            job_url = (
-                item.get("jobUrl")
-                or item.get("applicationUrl")
-                or item.get("url")
-                or ""
-            )
-
-            # Build public Gupy detail URL when the feed returns the subdomain + id instead of a URL.
-            if not job_url and item.get("id"):
-                subdomain = (
-                    item.get("careerPageSubdomain")
-                    or career_page.get("subdomain")
-                    or company_obj.get("subdomain")
-                    or ""
-                )
-                if subdomain:
-                    job_url = "https://" + subdomain + ".gupy.io/jobs/" + str(item.get("id"))
-
-            rows.append({
-                "id": "gupy-" + str(item.get("id") or abs(hash(job_url + title))),
-                "title": title,
-                "company": company,
-                "location": location_text,
-                "category": " • ".join([x for x in [workplace_label, item.get("jobTypeLabel") or item.get("jobType") or ""] if x]),
-                "description": "\n\n".join([x for x in [description, prerequisites, responsibilities] if x])[:6000],
-                "publication_date": published,
-                "url": job_url,
-                "remote": workplace == "remote",
-                "workplace_type": workplace,
-                "source": "Gupy Brasil",
-                "market": "Brasil",
-                "tags": ["Brasil", workplace_label, used_term],
-                "salary": item.get("salary") or ""
-            })
-
-        return "Gupy Brasil", rows
+        return "Vagas.com.br", rows
 
     def jooble_provider():
         rows = []
@@ -934,7 +1012,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
     def brazil_web_provider():
         mode_text = {"Remoto": "remoto", "Presencial": "presencial", "Híbrido": "híbrido"}.get(mode, "")
-        detail_sites = "(site:linkedin.com/jobs/view/ OR site:jobs.gupy.io/jobs/ OR site:br.indeed.com/viewjob OR site:boards.greenhouse.io OR site:lever.co)"
+        detail_sites = "(site:vagas.com.br/vagas/v OR site:linkedin.com/jobs/view/ OR site:br.indeed.com/viewjob OR site:boards.greenhouse.io OR site:lever.co)"
         web_query = " ".join([base, mode_text, brazil_location, "Brasil", detail_sites]).strip()
         rows = []
 
@@ -970,7 +1048,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
     providers = []
     if wants_brazil:
-        providers.append(gupy_brazil_provider)
+        providers.append(vagas_com_brazil_provider)
         providers.append(jobicy_brazil_provider)
         if os.getenv("JOOBLE_API_KEY", "").strip():
             providers.append(jooble_provider)
@@ -1046,10 +1124,10 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
     else:
         note += "."
 
-    if wants_brazil and not any(src in sources for src in ("Gupy Brasil", "Jobicy Brasil", "Jooble Brasil", "Web Brasil")):
+    if wants_brazil and not any(src in sources for src in ("Vagas.com.br", "Jobicy Brasil", "Jooble Brasil", "Web Brasil")):
         note += " As fontes brasileiras não responderam agora. Tente novamente em alguns instantes."
-    elif wants_brazil and "Gupy Brasil" in sources:
-        note += " A busca brasileira inclui vagas remotas, híbridas e presenciais da Gupy."
+    elif wants_brazil:
+        note += " A busca brasileira não usa Gupy."
 
     return {"jobs": result, "sources": sources, "market": market, "brazil_count": brazil_count, "international_count": intl_count, "note": note}
 
