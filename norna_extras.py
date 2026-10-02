@@ -460,6 +460,20 @@ def extract_rating(text):
             pass
     return None
 
+def rating_summary(values, label):
+    if not values:
+        return {"label": "", "quality": ""}
+    numeric = sorted(values)
+    mid = len(numeric) // 2
+    median = numeric[mid] if len(numeric) % 2 else round((numeric[mid-1] + numeric[mid]) / 2, 2)
+    if median >= 4.2:
+        quality = "Sinal público positivo"
+    elif median >= 3.5:
+        quality = "Avaliação pública intermediária"
+    else:
+        quality = "Avaliação pública abaixo da faixa de 3,5/5"
+    return {"label": f"{median:g}/5 {label}", "quality": quality}
+
 def learning_details(program="", institution="", link=""):
     program = (program or "").strip()
     institution = (institution or "").strip()
@@ -468,82 +482,80 @@ def learning_details(program="", institution="", link=""):
     if not os.getenv("SERPER_API_KEY", "").strip():
         return {
             "price": {"label": ""},
-            "rating": {"label": "", "quality": ""},
+            "course_rating": {"label": "", "quality": ""},
+            "institution_rating": {"label": "", "quality": ""},
             "sources": [],
             "note": "A consulta de preço e avaliação precisa da SERPER_API_KEY configurada no Render."
         }
 
-    query_name = " ".join(x for x in [program, institution] if x).strip()
-    queries = [
-        (query_name + " preço mensalidade valor curso").strip(),
-        (query_name + " avaliação nota estrelas opinião alunos").strip()
-    ]
+    official_domain = urlparse(link).netloc.replace("www.", "") if link else ""
+    name = " ".join(x for x in [program, institution] if x).strip()
 
-    organic = []
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = [pool.submit(serper_search, q, 8) for q in queries if q]
-        for future in as_completed(futures):
+    price_query = (name + " preço mensalidade valor curso").strip()
+    if official_domain:
+        price_query = (f'site:{official_domain} "{program}" preço mensalidade valor').strip()
+
+    queries = {
+        "price": price_query,
+        "course": (f'"{program}" "{institution}" avaliação nota estrelas alunos').strip(),
+        "institution": (f'"{institution}" avaliação nota estrelas alunos').strip()
+    }
+
+    results = {"price": [], "course": [], "institution": []}
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        future_map = {pool.submit(serper_search, q, 7): kind for kind, q in queries.items() if q}
+        for future in as_completed(future_map):
+            kind = future_map[future]
             try:
-                organic.extend(future.result() or [])
+                results[kind] = future.result() or []
             except Exception:
-                pass
+                results[kind] = []
 
-    seen_links = set()
-    sources = []
-    all_text = []
     prices = []
-    ratings = []
+    course_ratings = []
+    institution_ratings = []
+    sources = []
+    seen_links = set()
 
-    for item in organic:
-        title = (item.get("title") or "").strip()
-        item_link = (item.get("link") or "").strip()
-        snippet = (item.get("snippet") or "").strip()
-        if not item_link or item_link in seen_links:
-            continue
-        seen_links.add(item_link)
+    for kind, items in results.items():
+        for item in items:
+            title = (item.get("title") or "").strip()
+            item_link = (item.get("link") or "").strip()
+            snippet = (item.get("snippet") or "").strip()
+            combined = " ".join([title, snippet])
 
-        combined = " ".join([title, snippet])
-        all_text.append(combined)
-        prices.extend(extract_price_mentions(combined))
-        rating = extract_rating(combined)
-        if rating is not None:
-            ratings.append((rating, item_link, title))
+            if kind == "price":
+                prices.extend(extract_price_mentions(combined))
+            else:
+                rating = extract_rating(combined)
+                if rating is not None:
+                    if kind == "course":
+                        course_ratings.append(rating)
+                    else:
+                        institution_ratings.append(rating)
 
-        sources.append({
-            "name": source_name(item_link),
-            "title": title[:160],
-            "link": item_link,
-            "snippet": snippet[:320]
-        })
+            if item_link and item_link not in seen_links:
+                seen_links.add(item_link)
+                sources.append({
+                    "name": source_name(item_link),
+                    "title": title[:160],
+                    "link": item_link,
+                    "snippet": snippet[:320],
+                    "kind": kind
+                })
 
     prices = list(dict.fromkeys(prices))
-    price_label = ""
-    if prices:
-        price_label = "Valores encontrados: " + " • ".join(prices[:4])
+    price_label = "Valores encontrados: " + " • ".join(prices[:4]) if prices else ""
 
-    rating_label = ""
-    quality = ""
-    if ratings:
-        # Use a mediana simples das notas encontradas para reduzir o peso de um único snippet.
-        numeric = sorted(r[0] for r in ratings)
-        mid = len(numeric) // 2
-        median = numeric[mid] if len(numeric) % 2 else round((numeric[mid-1] + numeric[mid]) / 2, 2)
-        rating_label = f"{median:g}/5 em avaliações públicas encontradas"
-        if median >= 4.2:
-            quality = "Sinal público positivo"
-        elif median >= 3.5:
-            quality = "Avaliação pública intermediária"
-        else:
-            quality = "Avaliação pública abaixo da faixa de 3,5/5"
-
-    note = "Preço e avaliação podem variar por turma, modalidade, campus, bolsa e período. A NORNA mostra apenas o que conseguiu localizar publicamente agora."
     return {
         "price": {"label": price_label, "mentions": prices[:8]},
-        "rating": {"label": rating_label, "quality": quality},
-        "sources": sources[:6],
+        "course_rating": rating_summary(course_ratings, "para o curso"),
+        "institution_rating": rating_summary(institution_ratings, "para a instituição"),
+        "sources": sources[:8],
         "official_link": link,
-        "note": note
+        "note": "Preço e avaliações podem variar por turma, modalidade, campus, bolsa e período. A NORNA mostra apenas informações públicas que conseguiu localizar agora."
     }
+
 
 def parse_dt(value):
     if not value:
