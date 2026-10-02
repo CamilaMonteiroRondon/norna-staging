@@ -203,6 +203,18 @@ def parse_courses(lines):
         out.append({"name": name[:180], "platform": platform[:140], "status": "Concluído", "progress": 100})
     return clean_resume_items(out, ["name", "platform"])[:16]
 
+def parse_projects(lines):
+    projects = []
+    for raw in lines or []:
+        line = raw.strip(" •|-")
+        if len(line) < 2:
+            continue
+        parts = [p.strip() for p in re.split(r"\s+[|—–-]\s+", line) if p.strip()]
+        name = parts[0] if parts else line
+        if 2 <= len(name) <= 120:
+            projects.append(name)
+    return list(dict.fromkeys(projects))[:20]
+
 def analyze_resume(text):
     raw = (text or "").replace("\u2022", "\n• ")
     raw_lines = [re.sub(r"\s+", " ", x).strip() for x in re.split(r"[\r\n]+", raw)]
@@ -290,7 +302,8 @@ def analyze_resume(text):
         "education": education,
         "experience": experience,
         "skills": skills,
-        "courses": courses
+        "courses": courses,
+        "projects": parse_projects(sections.get("projects", []))
     }
 
 LEARNING_CATALOG = [
