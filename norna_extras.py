@@ -403,6 +403,148 @@ def source_name(link):
     except Exception:
         return "web"
 
+def is_specific_job_result(link, title=""):
+    url = (link or "").lower()
+    ttl = fold(title or "")
+
+    detail_patterns = (
+        "linkedin.com/jobs/view/",
+        "jobs.gupy.io/jobs/",
+        ".gupy.io/job/",
+        "gupy.io/job/",
+        "br.indeed.com/viewjob",
+        "indeed.com/viewjob",
+        "greenhouse.io/jobs/",
+        "boards.greenhouse.io/",
+        "lever.co/",
+        "workable.com/j/",
+        "jobs.ashbyhq.com/",
+        "vagas.com.br/vagas/v",
+        "trampos.co/oportunidades/"
+    )
+    if not any(pattern in url for pattern in detail_patterns):
+        return False
+
+    aggregate_phrases = (
+        "vagas de emprego", "empregos de ", "jobs in ", "job search",
+        "oportunidades de emprego", "vagas para "
+    )
+    if any(phrase in ttl for phrase in aggregate_phrases):
+        return False
+    if re.search(r"\b\d[\d\s.,+]*\s+vagas?\b", ttl):
+        return False
+    return True
+
+def extract_price_mentions(text):
+    if not text:
+        return []
+    values = re.findall(r"R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?", text, flags=re.I)
+    return list(dict.fromkeys(v.strip() for v in values))[:8]
+
+def extract_rating(text):
+    if not text:
+        return None
+    patterns = [
+        r"(?:nota|avalia[cç][aã]o|rating)\s*[:\-]?\s*([0-5](?:[.,]\d{1,2})?)\s*(?:/\s*5)?",
+        r"([0-5](?:[.,]\d{1,2})?)\s*(?:/\s*5|de\s*5|estrelas?)"
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, fold(text), flags=re.I)
+        if not m:
+            continue
+        try:
+            value = float(m.group(1).replace(",", "."))
+            if 0 <= value <= 5:
+                return round(value, 2)
+        except Exception:
+            pass
+    return None
+
+def learning_details(program="", institution="", link=""):
+    program = (program or "").strip()
+    institution = (institution or "").strip()
+    link = (link or "").strip()
+
+    if not os.getenv("SERPER_API_KEY", "").strip():
+        return {
+            "price": {"label": ""},
+            "rating": {"label": "", "quality": ""},
+            "sources": [],
+            "note": "A consulta de preço e avaliação precisa da SERPER_API_KEY configurada no Render."
+        }
+
+    query_name = " ".join(x for x in [program, institution] if x).strip()
+    queries = [
+        (query_name + " preço mensalidade valor curso").strip(),
+        (query_name + " avaliação nota estrelas opinião alunos").strip()
+    ]
+
+    organic = []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(serper_search, q, 8) for q in queries if q]
+        for future in as_completed(futures):
+            try:
+                organic.extend(future.result() or [])
+            except Exception:
+                pass
+
+    seen_links = set()
+    sources = []
+    all_text = []
+    prices = []
+    ratings = []
+
+    for item in organic:
+        title = (item.get("title") or "").strip()
+        item_link = (item.get("link") or "").strip()
+        snippet = (item.get("snippet") or "").strip()
+        if not item_link or item_link in seen_links:
+            continue
+        seen_links.add(item_link)
+
+        combined = " ".join([title, snippet])
+        all_text.append(combined)
+        prices.extend(extract_price_mentions(combined))
+        rating = extract_rating(combined)
+        if rating is not None:
+            ratings.append((rating, item_link, title))
+
+        sources.append({
+            "name": source_name(item_link),
+            "title": title[:160],
+            "link": item_link,
+            "snippet": snippet[:320]
+        })
+
+    prices = list(dict.fromkeys(prices))
+    price_label = ""
+    if prices:
+        price_label = "Valores encontrados: " + " • ".join(prices[:4])
+
+    rating_label = ""
+    quality = ""
+    if ratings:
+        # Use a mediana simples das notas encontradas para reduzir o peso de um único snippet.
+        numeric = sorted(r[0] for r in ratings)
+        mid = len(numeric) // 2
+        median = numeric[mid] if len(numeric) % 2 else round((numeric[mid-1] + numeric[mid]) / 2, 2)
+        rating_label = f"{median:g}/5 em avaliações públicas encontradas"
+        if median >= 4.2:
+            quality = "Sinal público positivo"
+        elif median >= 3.5:
+            quality = "Avaliação pública intermediária"
+        else:
+            quality = "Avaliação pública abaixo da faixa de 3,5/5"
+
+    note = "Preço e avaliação podem variar por turma, modalidade, campus, bolsa e período. A NORNA mostra apenas o que conseguiu localizar publicamente agora."
+    return {
+        "price": {"label": price_label, "mentions": prices[:8]},
+        "rating": {"label": rating_label, "quality": quality},
+        "sources": sources[:6],
+        "official_link": link,
+        "note": note
+    }
+
 def parse_dt(value):
     if not value:
         return None
@@ -584,28 +726,37 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
     def brazil_web_provider():
         mode_text = {"Remoto": "remoto", "Presencial": "presencial", "Híbrido": "híbrido"}.get(mode, "")
-        web_query = " ".join(["vaga", base, mode_text, brazil_location, "Brasil emprego"]).strip()
+        detail_sites = "(site:linkedin.com/jobs/view/ OR site:jobs.gupy.io/jobs/ OR site:br.indeed.com/viewjob OR site:boards.greenhouse.io OR site:lever.co)"
+        web_query = " ".join([base, mode_text, brazil_location, "Brasil", detail_sites]).strip()
         rows = []
-        for item in serper_search(web_query, 15):
+
+        for item in serper_search(web_query, 20):
             title = (item.get("title") or "").strip()
             link = (item.get("link") or "").strip()
             snippet = (item.get("snippet") or "").strip()
-            if not title or not link:
+            if not title or not link or not is_specific_job_result(link, title):
                 continue
+
             txt = fold(title + " " + snippet)
+            company = ""
+            if " - " in title:
+                parts = [p.strip() for p in title.split(" - ") if p.strip()]
+                if len(parts) >= 2:
+                    company = parts[-1][:120]
+
             rows.append({
                 "id": "web-br-" + str(abs(hash(link))),
                 "title": title,
-                "company": "",
+                "company": company,
                 "location": brazil_location,
-                "category": "Resultado web no Brasil",
+                "category": "Vaga no Brasil",
                 "description": snippet,
                 "publication_date": item.get("date", ""),
                 "url": link,
                 "remote": "remot" in txt or mode == "Remoto",
                 "source": source_name(link),
                 "market": "Brasil",
-                "tags": ["Brasil", "web"]
+                "tags": ["Brasil", "vaga individual", "web"]
             })
         return "Web Brasil", rows
 
@@ -645,7 +796,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
     elif mode == "Híbrido":
         jobs = [j for j in jobs if "hybrid" in fold(j.get("description", "")) or "hibrid" in fold(j.get("description", ""))]
 
-    ranked = [(relevance(j, terms), j) for j in jobs]
+    ranked = [(relevance(j, terms) + (2 if market == "Todos" and j.get("market") == "Brasil" else 0), j) for j in jobs]
     if terms:
         ranked = [(score, j) for score, j in ranked if score > 0]
     ranked.sort(key=lambda pair: pair[0], reverse=True)
