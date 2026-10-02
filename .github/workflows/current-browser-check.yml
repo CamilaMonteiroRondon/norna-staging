@@ -65,7 +65,7 @@ jobs:
           console.log('COMPETENCIAS:',await page.textContent('#page-competencias'));
           const python=page.locator('.skill-item').filter({hasText:'Python'}).first();
           if(await python.count()!==1) throw new Error('Python skill missing');
-          if(!(await python.textContent()).includes('85%')) throw new Error('Resume skill is not strong');
+          if(!(await python.textContent()).includes('100%')) throw new Error('Resume skill is not strong');
 
           await page.click('[data-page="cursos"]');
           const courseText=await page.textContent('#courseList');
