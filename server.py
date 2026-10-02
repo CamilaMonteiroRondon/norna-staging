@@ -34,8 +34,9 @@ def request_base_url(handler):
     return f'{proto}://{host}'
 
 EMPTY_DATA = {
-    'profile': {'photo': '', 'name': '', 'area': '', 'role': '', 'level': '', 'mode': '', 'location': '', 'study': '', 'opportunity': '', 'about': ''},
-    'education': [], 'experience': [], 'journey': [], 'courses': [], 'skills': [], 'savedJobs': [], 'savedLearning': []
+    'profile': {'photo': '', 'name': '', 'age': '', 'area': '', 'role': '', 'level': '', 'mode': '', 'location': '', 'study': '', 'opportunity': '', 'about': ''},
+    'education': [], 'experience': [], 'journey': [], 'courses': [], 'skills': [], 'savedJobs': [], 'savedLearning': [],
+    'resumeText': '', 'resumeFileName': ''
 }
 
 def db():
