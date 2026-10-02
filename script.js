@@ -159,14 +159,19 @@ function openNativeMore(){
   if(!nativeMoreSheet)return;
   nativeMoreSheet.classList.add("open");
   nativeMoreSheet.setAttribute("aria-hidden","false");
+  nativeBottomMore?.classList.add("active");
 }
 function closeNativeMore(){
   if(!nativeMoreSheet)return;
   nativeMoreSheet.classList.remove("open");
   nativeMoreSheet.setAttribute("aria-hidden","true");
+  nativeBottomMore?.classList.remove("active");
 }
-const nativeMoreButton=document.getElementById("nativeMoreButton");
-if(nativeMoreButton)nativeMoreButton.onclick=openNativeMore;
+const nativeBottomMore=document.getElementById("nativeBottomMore");
+if(nativeBottomMore)nativeBottomMore.onclick=e=>{
+  e.stopPropagation();
+  openNativeMore();
+};
 document.querySelectorAll("[data-close-native-more]").forEach(b=>b.onclick=closeNativeMore);
 
 // VISUAL / RESET
@@ -267,13 +272,16 @@ function renderProfile(){
   });
 
   const avatar=p.photo||placeholder();
-  ["profileAvatar","profileViewAvatar","topAvatar"].forEach(id=>{const el=document.getElementById(id);if(el)el.src=avatar});
+  ["profileAvatar","profileViewAvatar","topAvatar","nativeProfileAvatar"].forEach(id=>{const el=document.getElementById(id);if(el)el.src=avatar});
 
   const ageValue=calculateAge(p.birthDate);
   const birthText=p.birthDate?formatDateBR(p.birthDate)+(ageValue!==null?` • ${ageValue} anos`:""):(ageValue!==null?`${ageValue} anos • adicione sua data de nascimento`:"Não informada");
 
   const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
   setText("profileViewName",p.name||"Seu nome");
+  setText("nativeProfileName",p.name||"Seu perfil");
+  setText("nativeProfileAge",ageValue!==null?`${ageValue} anos`:"");
+  setText("nativeProfileMeta",profileHeadline());
   setText("profileViewHeadline",profileHeadline());
   setText("profileViewMeta",[p.area,p.level].filter(Boolean).join(" • ")||"Complete seu objetivo profissional");
   setText("profileViewBirth",birthText);
@@ -333,6 +341,9 @@ if(topEditProfileAction)topEditProfileAction.onclick=()=>{
   go("perfil");
   showProfileEditor(true);
 };
+
+const nativeProfileCard=document.getElementById("nativeProfileCard");
+if(nativeProfileCard)nativeProfileCard.onclick=()=>go("perfil");
 document.addEventListener("click",e=>{
   if(topProfileArea&&!topProfileArea.contains(e.target))closeTopProfileMenu();
 });
