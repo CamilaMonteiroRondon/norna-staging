@@ -662,3 +662,118 @@ html,body,.access-page,.app-auth-page{
   0%,100%{stroke-dashoffset:0;transform:translateY(1px) rotate(0deg)}
   50%{stroke-dashoffset:40;transform:translateY(3px) rotate(-1deg)}
 }
+
+
+/* Final public color consistency */
+.public-nav,
+.access-card,
+.mobile-auth-card,
+.native-login-card{
+  background:rgba(251,248,250,.90)!important;
+  border-color:rgba(90,72,92,.11)!important;
+}
+.nav-link,
+.active-button,
+.ghost-big,
+.link-button{
+  background:#f0e8ef!important;
+  border-color:rgba(90,72,92,.12)!important;
+  color:#665264!important;
+}
+.nav-link:hover,
+.active-button:hover,
+.ghost-big:hover,
+.link-button:hover{
+  background:#e9dfe7!important;
+  color:#594656!important;
+}
+.nav-cta,
+.primary-big,
+.apk-download-button,
+.install-cta,
+.access-card .auth-form>button[type=submit],
+.mobile-auth-card .auth-form>button[type=submit]{
+  background:linear-gradient(135deg,#92728d,#735c70)!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:0 10px 28px rgba(90,72,92,.12)!important;
+}
+.nav-cta:hover,
+.primary-big:hover,
+.apk-download-button:hover,
+.install-cta:hover,
+.access-card .auth-form>button[type=submit]:hover,
+.mobile-auth-card .auth-form>button[type=submit]:hover{
+  background:linear-gradient(135deg,#856781,#675064)!important;
+  color:#fff!important;
+}
+.editorial-card{
+  background:rgba(251,248,250,.82)!important;
+  border-color:rgba(90,72,92,.10)!important;
+  box-shadow:0 18px 50px rgba(76,60,77,.07)!important;
+}
+.editorial-card p,
+.process-list p,
+.editorial-lead,
+.hero-text,
+.apk-helper{
+  color:#716876!important;
+}
+.editorial-card h2,
+.process-list h2,
+.editorial-hero h1,
+.home-copy-clean h1{
+  color:#342f38!important;
+}
+.quote-card p,
+.editorial-hero h1 em,
+.home-copy-clean h1 em{
+  color:#8f6f88!important;
+}
+.process-list{
+  border-top-color:rgba(90,72,92,.12)!important;
+}
+.process-list article{
+  grid-template-columns:1fr!important;
+  gap:0!important;
+  border-bottom-color:rgba(90,72,92,.12)!important;
+  padding:26px 0!important;
+}
+.process-list article>span,
+.card-number{
+  display:none!important;
+}
+.access-card input,
+.mobile-auth-card input{
+  background:#f1e9ef!important;
+  border-color:rgba(90,72,92,.13)!important;
+}
+.access-card input:focus,
+.mobile-auth-card input:focus{
+  border-color:#a3839d!important;
+  box-shadow:0 0 0 2px rgba(155,126,150,.08);
+}
+.access-card .form-link,
+.access-card .switch button,
+.mobile-auth-card .form-link,
+.mobile-auth-card .switch button{
+  color:#745b71!important;
+}
+.overline{
+  color:#8c7086!important;
+}
+
+/* solid moving logo threads */
+.norna-wordmark .logo-thread-a,
+.norna-wordmark .logo-thread-b{
+  stroke-dasharray:none!important;
+  stroke-dashoffset:0!important;
+}
+@keyframes nornaPublicThreadA{
+  0%,100%{transform:translateY(0) rotate(0deg) scaleX(1)}
+  50%{transform:translateY(-3px) rotate(.9deg) scaleX(1.015)}
+}
+@keyframes nornaPublicThreadB{
+  0%,100%{transform:translateY(2px) rotate(0deg) scaleX(1)}
+  50%{transform:translateY(5px) rotate(-1.1deg) scaleX(.985)}
+}
