@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>NORNA — Seu caminho, fio por fio</title>
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="landing.css?v=20261001g">
+  <link rel="stylesheet" href="landing.css?v=20261002f">
 </head>
 <body class="public-page home-page">
   <canvas id="threadCanvas" aria-hidden="true"></canvas>
@@ -17,7 +17,7 @@
       <div class="norna-wordmark" aria-label="NORNA">
         <span class="mark-text">NORNA</span>
         <svg viewBox="0 0 310 78" aria-hidden="true">
-          <path d="M18 49 C84 17,140 58,210 35 S263 29,292 42"/>
+          <path class="logo-thread logo-thread-a" d="M18 49 C84 17,140 58,210 35 S263 29,292 42"/><path class="logo-thread logo-thread-b" d="M22 34 C76 61,132 18,190 43 S251 55,290 30"/>
         </svg>
       </div>
     </a>
@@ -54,7 +54,7 @@
     <p>Feito por Camila Monteiro • 2026</p>
   </footer>
 
-  <script src="public.js?v=20261001g"></script>
+  <script src="public.js?v=20261002f"></script>
   <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
