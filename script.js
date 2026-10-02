@@ -309,8 +309,33 @@ document.getElementById("profilePhoto").onchange=e=>{
 document.getElementById("removePhoto").onclick=()=>{data.profile.photo="";save();renderAll()};
 function placeholder(){return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" rx="34" fill="#c6b8af"/><circle cx="80" cy="61" r="28" fill="#9d6b66"/><path d="M35 143c4-31 22-46 45-46s41 15 45 46" fill="#9d6b66"/></svg>`)}
 
-const topProfileChip=document.getElementById("topProfileChip");
-if(topProfileChip)topProfileChip.onclick=()=>{go("perfil");showProfileEditor(false)};
+const topProfileArea=document.getElementById("topProfileArea");
+const topProfileAvatarButton=document.getElementById("topProfileAvatarButton");
+const topProfileMenu=document.getElementById("topProfileMenu");
+const topEditProfileAction=document.getElementById("topEditProfileAction");
+
+function closeTopProfileMenu(){
+  topProfileArea?.classList.remove("menu-open");
+  topProfileAvatarButton?.setAttribute("aria-expanded","false");
+}
+function toggleTopProfileMenu(){
+  if(!topProfileArea)return;
+  const open=!topProfileArea.classList.contains("menu-open");
+  topProfileArea.classList.toggle("menu-open",open);
+  topProfileAvatarButton?.setAttribute("aria-expanded",open?"true":"false");
+}
+if(topProfileAvatarButton)topProfileAvatarButton.onclick=e=>{
+  e.stopPropagation();
+  toggleTopProfileMenu();
+};
+if(topEditProfileAction)topEditProfileAction.onclick=()=>{
+  closeTopProfileMenu();
+  go("perfil");
+  showProfileEditor(true);
+};
+document.addEventListener("click",e=>{
+  if(topProfileArea&&!topProfileArea.contains(e.target))closeTopProfileMenu();
+});
 
 // JORNADA
 document.getElementById("addJourney").onclick=()=>journeyModal();
