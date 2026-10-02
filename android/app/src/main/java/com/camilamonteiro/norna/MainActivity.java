@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(false);
         settings.setTextZoom(100);
-        settings.setUserAgentString(settings.getUserAgentString() + " NORNA-Android/0.2.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " NORNA-Android/0.2.3");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
