@@ -31,6 +31,19 @@ async function bootstrap(){
 
     const payload=await r.json();
     data=normalizeData(payload.data);
+
+    // Atualiza uma única vez currículos importados antes da sincronização
+    // de competências fortes e cursos automáticos.
+    if(data.resumeText&&Number(data.resumeSyncVersion||0)<2){
+      try{
+        await analyzeResumeText(data.resumeText,null);
+        data.resumeSyncVersion=2;
+        await syncData();
+      }catch(err){
+        console.warn("Não foi possível atualizar automaticamente o currículo antigo.",err);
+      }
+    }
+
     localStorage.setItem(KEY,JSON.stringify(data));
     renderAll();
   }catch(err){
@@ -337,6 +350,7 @@ async function analyzeResumeText(text,status){
   const j=await r.json();
   if(!r.ok)throw new Error(j.error||"Não foi possível analisar o currículo.");
   replaceResumeAnalysis(j.extracted);
+  data.resumeSyncVersion=2;
   if(status)status.textContent=`Currículo lido: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) identificadas.`;
   return j;
 }
