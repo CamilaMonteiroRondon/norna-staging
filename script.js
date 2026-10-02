@@ -729,9 +729,19 @@ document.getElementById("findJobs").onclick=async()=>{
     const params=new URLSearchParams({query,keyword,role:data.profile.role||"",area:data.profile.area||"",location:data.profile.location||"",market,mode:mode||"",days:days||"7"});
     const r=await fetch("/api/jobs?"+params.toString()),j=await r.json();
     if(!r.ok)throw new Error(j.error||"A busca não respondeu.");
-    recommendedJobs=(j.jobs||[]).map(x=>({...x,...matchInfo(`${x.title} ${x.description||""} ${x.category||""}`)}));
-    recommendedJobs=recommendedJobs.filter(x=>x.score>=min).sort((a,b)=>b.score-a.score);
-    note.textContent=`${j.note||""} ${recommendedJobs.length} passou(aram) pelo filtro de compatibilidade mínima.`;
+    const scoredJobs=(j.jobs||[])
+      .map(x=>({...x,...matchInfo(`${x.title} ${x.description||""} ${x.category||""}`)}))
+      .sort((a,b)=>b.score-a.score);
+
+    recommendedJobs=scoredJobs.filter(x=>x.score>=min);
+    let filterNote=`${recommendedJobs.length} passou(aram) pelo filtro de compatibilidade mínima.`;
+
+    if(scoredJobs.length>0&&recommendedJobs.length===0&&min>0){
+      recommendedJobs=scoredJobs;
+      filterNote=`Nenhuma atingiu ${min}%; mostrando todas as vagas encontradas para você não perder oportunidades.`;
+    }
+
+    note.textContent=`${j.note||""} ${filterNote}`;
     currentJobTab="recommended";setJobTab();renderJobs();
   }catch(err){recommendedJobs=[];renderJobs();note.textContent="Não foi possível consultar as fontes agora: "+(err.message||"erro temporário")}}
 ;
