@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Acesso — NORNA</title>
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="landing.css?v=20261002a">
+  <link rel="stylesheet" href="landing.css?v=20261002f">
 </head>
 <body class="app-auth-page access-page native-app-login">
   <canvas id="threadCanvas" aria-hidden="true"></canvas>
@@ -17,7 +17,7 @@
       <div class="norna-wordmark">
         <span class="mark-text">NORNA</span>
         <svg viewBox="0 0 310 78" aria-hidden="true">
-          <path d="M18 49 C84 17,140 58,210 35 S263 29,292 42"/>
+          <path class="logo-thread logo-thread-a" d="M18 49 C84 17,140 58,210 35 S263 29,292 42"/><path class="logo-thread logo-thread-b" d="M22 34 C76 61,132 18,190 43 S251 55,290 30"/>
         </svg>
       </div>
     </div>
@@ -67,8 +67,8 @@
     <footer class="access-footer">Feito por Camila Monteiro • 2026</footer>
   </main>
 
-  <script src="public.js?v=20261002a"></script>
-  <script src="auth.js?v=20261002a"></script>
+  <script src="public.js?v=20261002f"></script>
+  <script src="auth.js?v=20261002f"></script>
   <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
