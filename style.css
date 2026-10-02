@@ -976,3 +976,217 @@ body.native-app .detail-modal{
   max-height:82dvh;
   overflow:auto;
 }
+
+
+/* NORNA light mauve palette + animated threads */
+:root,
+body.light,
+body.dark{
+  --bg:#f4f0f3;
+  --surface:#fbf8fa;
+  --surface2:#f0e8ef;
+  --text:#342f38;
+  --muted:#756d79;
+  --border:rgba(90,72,92,.14);
+  --purple:#92728d;
+  --purple2:#9f7f98;
+  --purple3:#725b70;
+  --danger:#a45e6b;
+}
+html,body,
+body.light,body.dark{
+  background:
+    radial-gradient(circle at 82% 10%,rgba(179,148,176,.12),transparent 28%),
+    radial-gradient(circle at 18% 28%,rgba(225,210,223,.26),transparent 32%),
+    linear-gradient(145deg,#f7f3f5 0%,#efe9ee 52%,#e9e2e8 100%)!important;
+  color:#342f38!important;
+}
+#appThreadCanvas{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  opacity:.88;
+}
+.app{
+  position:relative;
+  z-index:1;
+  background:transparent!important;
+}
+.sidebar,
+body.light .sidebar,
+body.dark .sidebar{
+  background:linear-gradient(180deg,#eee7ed,#e9e0e8)!important;
+  border-right-color:rgba(90,72,92,.12)!important;
+  box-shadow:12px 0 38px rgba(83,67,84,.05)!important;
+}
+.card,.stats article,.course-card,.opp-card,
+body.dark .card,body.dark .stats article,body.dark .course-card,body.dark .opp-card{
+  background:rgba(251,248,250,.86)!important;
+  color:#342f38!important;
+  border-color:rgba(90,72,92,.12)!important;
+}
+input,select,textarea,.mini,.secondary,.ai-answer,
+body.dark input,body.dark select,body.dark textarea,
+body.dark .mini,body.dark .secondary,body.dark .ai-answer{
+  background:#f2ebf1!important;
+  color:#342f38!important;
+  border-color:rgba(90,72,92,.14)!important;
+}
+.modal,body.dark .modal{
+  background:#f7f2f6!important;
+  color:#342f38!important;
+  border-color:rgba(90,72,92,.14)!important;
+}
+.profile-chip,.profile-chip-button,
+body.dark .profile-chip,body.dark .profile-chip-button{
+  background:rgba(250,246,249,.88)!important;
+  color:#342f38!important;
+  border-color:rgba(90,72,92,.13)!important;
+}
+.nav-btn,body.dark .nav-btn{color:#716776!important}
+.nav-btn.active,body.dark .nav-btn.active{
+  color:#684f65!important;
+  background:rgba(146,114,141,.12)!important;
+  border-color:rgba(146,114,141,.15)!important;
+}
+.primary{
+  background:linear-gradient(135deg,#92728d,#725b70)!important;
+  color:#fff!important;
+}
+.link-btn,.label,.opp-actions button{color:#7a6076!important}
+.fill{background:linear-gradient(90deg,#8e708a,#c3a0bb)!important}
+.score-circle{border-color:rgba(146,114,141,.22)!important;color:#745b71!important}
+.tag{background:rgba(146,114,141,.11)!important;color:#70586d!important}
+.tag.gap{background:rgba(164,94,107,.08)!important;color:#9c5866!important}
+.dashboard-greeting h2,
+.intro h2,
+.profile-public-head h2,
+.resume-paper-head h2{color:#342f38!important}
+.content:before{display:none!important}
+
+/* top bar no longer repeats page name */
+.topbar{
+  justify-content:flex-end!important;
+}
+.topbar-mobile-brand{display:none!important}
+body.native-app .topbar-mobile-brand{
+  display:flex!important;
+  align-items:center;
+}
+body.native-app .topbar-mobile-brand span{
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:19px!important;
+  letter-spacing:.16em;
+  color:#4d4050!important;
+}
+body.native-app .topbar{
+  background:rgba(247,243,246,.94)!important;
+  border-bottom-color:rgba(90,72,92,.10)!important;
+  justify-content:space-between!important;
+}
+body.native-app{
+  background:linear-gradient(155deg,#f7f3f6,#eee7ed)!important;
+}
+body.native-app .native-bottom-nav{
+  background:rgba(251,248,250,.96)!important;
+  border-color:rgba(90,72,92,.12)!important;
+}
+.native-nav-btn{color:#756c78!important}
+.native-nav-btn.active{background:#ece3eb!important;color:#674f64!important}
+.native-sheet-panel{background:#f8f3f7!important}
+.native-sheet-grid button{background:#efe7ed!important;color:#4b414d!important}
+
+/* animated NORNA logo threads */
+.brand-image-wrap .norna-wordmark path.logo-thread,
+.norna-wordmark path.logo-thread{
+  fill:none;
+  stroke:#8f7189!important;
+  stroke-linecap:round;
+  transform-origin:center;
+}
+.logo-thread-a{
+  stroke-width:1.25!important;
+  opacity:.70!important;
+  stroke-dasharray:9 7;
+  animation:nornaThreadA 6s ease-in-out infinite;
+}
+.logo-thread-b{
+  stroke:#c09bb6!important;
+  stroke-width:.85!important;
+  opacity:.55!important;
+  stroke-dasharray:6 9;
+  animation:nornaThreadB 7.4s ease-in-out infinite reverse;
+}
+@keyframes nornaThreadA{
+  0%,100%{stroke-dashoffset:0;transform:translateY(0) rotate(0deg)}
+  50%{stroke-dashoffset:-42;transform:translateY(-2px) rotate(.8deg)}
+}
+@keyframes nornaThreadB{
+  0%,100%{stroke-dashoffset:0;transform:translateY(1px) rotate(0deg)}
+  50%{stroke-dashoffset:38;transform:translateY(3px) rotate(-1deg)}
+}
+
+/* Trail source marker */
+.trail-item-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.trail-source{
+  flex:0 0 auto;
+  padding:4px 7px;
+  border-radius:999px;
+  background:#eee4ec;
+  color:#7b6176;
+  font-size:7px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+/* Learning detail facts */
+.learning-detail-facts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-top:9px;
+}
+.learning-detail-facts>div{
+  padding:12px;
+  border-radius:13px;
+  background:#f0e8ef;
+  border:1px solid rgba(90,72,92,.10);
+}
+.learning-detail-facts span{
+  display:block;
+  color:#756d79;
+  font-size:8px;
+  margin-bottom:5px;
+}
+.learning-detail-facts strong{
+  display:block;
+  font-size:10px;
+  line-height:1.45;
+}
+.learning-detail-facts small{
+  display:block;
+  margin-top:5px;
+  color:#7a6076;
+  font-size:8px;
+}
+.detail-note,.detail-sources{
+  margin-top:10px!important;
+  color:#756d79!important;
+  font-size:8px!important;
+}
+.detail-sources a{
+  color:#745b71;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+@media(max-width:600px){
+  .learning-detail-facts{grid-template-columns:1fr}
+}
