@@ -536,3 +536,58 @@ html,body,.access-page,.app-auth-page{
   background:#e7dbd2!important;
   color:#342a27!important;
 }
+
+
+/* Native Android login 2026-10-02 */
+.native-app-login{
+  background:linear-gradient(160deg,#eee5de,#ddd0c6)!important;
+}
+.native-app-login .access-shell{
+  min-height:100dvh;
+  justify-content:center;
+  padding:26px 18px 20px;
+}
+.native-app-login .access-logo{
+  margin-bottom:4px!important;
+}
+.native-app-login .access-logo .norna-wordmark{
+  width:200px!important;
+  height:66px;
+}
+.native-app-login .access-logo .mark-text{
+  font-size:34px;
+}
+.native-login-slogan{
+  margin:2px 0 22px;
+  color:#7b6962;
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:14px;
+  font-style:italic;
+  text-align:center;
+}
+.native-login-card{
+  width:min(420px,100%)!important;
+  border-radius:28px!important;
+  padding:24px 20px 20px!important;
+  background:rgba(245,237,231,.93)!important;
+  box-shadow:0 22px 70px rgba(70,48,42,.12)!important;
+}
+.native-login-form label{
+  margin-top:12px!important;
+}
+.native-login-form>button[type=submit]{
+  min-height:46px;
+  border-radius:13px;
+  margin-top:16px!important;
+}
+.native-app-login .form-link{
+  margin-top:10px;
+}
+.native-app-login .switch{
+  margin-top:15px!important;
+}
+.native-app-login .access-footer{
+  margin-top:16px;
+  font-size:9px;
+  color:#8a756d;
+}
