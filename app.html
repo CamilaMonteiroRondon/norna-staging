@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261002h">
+  <link rel="stylesheet" href="style.css?v=20261002i">
 </head>
 <body>
 <canvas id="appThreadCanvas" aria-hidden="true"></canvas>
@@ -37,8 +37,6 @@
     <header class="topbar">
       <div class="topbar-mobile-brand native-only"><span>NORNA</span></div>
       <div class="top-actions">
-        <button id="nativeMoreButton" class="native-more-button native-only" type="button" aria-label="Mais opções">•••</button>
-
         <div id="topProfileArea" class="top-profile-area">
           <button id="topProfileAvatarButton" class="top-profile-avatar-button" type="button" aria-label="Abrir menu do perfil" aria-expanded="false">
             <img id="topAvatar" class="avatar top-profile-avatar" alt="">
@@ -56,6 +54,15 @@
         </div>
       </div>
     </header>
+
+    <button id="nativeProfileCard" class="native-profile-card native-only" type="button" aria-label="Abrir meu perfil">
+      <img id="nativeProfileAvatar" class="avatar native-profile-avatar" alt="">
+      <span class="native-profile-copy">
+        <strong id="nativeProfileName">Seu perfil</strong>
+        <small id="nativeProfileAge"></small>
+        <small id="nativeProfileMeta">Perfil profissional</small>
+      </span>
+    </button>
 
     <section id="page-dashboard" class="page active">
       <div class="dashboard-greeting">
@@ -265,22 +272,20 @@
 
 <nav id="nativeBottomNav" class="native-bottom-nav native-only" aria-label="Navegação do aplicativo">
   <button class="native-nav-btn active" data-mobile-page="dashboard" type="button"><span class="native-icon">⌂</span><small>Início</small></button>
+  <button class="native-nav-btn" data-mobile-page="perfil" type="button"><span class="native-icon">○</span><small>Perfil</small></button>
   <button class="native-nav-btn" data-mobile-page="jornada" type="button"><span class="native-icon">◇</span><small>Trilha</small></button>
   <button class="native-nav-btn" data-mobile-page="curriculo" type="button"><span class="native-icon">▤</span><small>Currículo</small></button>
   <button class="native-nav-btn" data-mobile-page="vagas" type="button"><span class="native-icon">⌕</span><small>Vagas</small></button>
-  <button class="native-nav-btn" data-mobile-page="ia" type="button"><span class="native-icon">✦</span><small>IA</small></button>
-  <button class="native-nav-btn" data-mobile-page="perfil" type="button"><span class="native-icon">○</span><small>Perfil</small></button>
-</nav>
-
-<div id="nativeMoreSheet" class="native-more-sheet native-only" aria-hidden="true">
+  <button id="nativeBottomMore" class="native-nav-btn native-more-nav-btn" type="button" aria-label="Mais opções"><span class="native-icon<div id="nativeMoreSheet" class="native-more-sheet native-only" aria-hidden="true">
   <button class="native-sheet-backdrop" data-close-native-more type="button" aria-label="Fechar"></button>
   <div class="native-sheet-panel">
     <div class="native-sheet-handle"></div>
     <strong>Mais na NORNA</strong>
     <div class="native-sheet-grid">
-      <button data-mobile-page="cursos" type="button"><span>▣</span>Meus Cursos</button>
-      <button data-mobile-page="competencias" type="button"><span>◎</span>Competências</button>
       <button data-mobile-page="formacoes" type="button"><span>△</span>Formações</button>
+      <button data-mobile-page="competencias" type="button"><span>◎</span>Competências</button>
+      <button data-mobile-page="cursos" type="button"><span>▣</span>Meus Cursos</button>
+      <button data-mobile-page="ia" type="button"><span>✦</span>NORNA IA</button>
     </div>
   </div>
 </div>
@@ -299,7 +304,7 @@
 <div id="toast" class="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<script src="script.js?v=20261002h"></script>
+<script src="script.js?v=20261002i"></script>
 <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
