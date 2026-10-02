@@ -1581,3 +1581,51 @@ body.native-app .opp-card,
 body.native-app .course-card{
   backdrop-filter:blur(4px);
 }
+
+
+/* Android NORNA wordmark and clearly moving solid threads */
+body.native-app .native-wordmark{
+  width:142px;
+  height:48px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+body.native-app .native-wordmark>span{
+  position:relative;
+  z-index:2;
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:22px;
+  letter-spacing:.17em;
+  color:#4d4050!important;
+}
+body.native-app .native-wordmark svg{
+  position:absolute;
+  inset:0 -6px;
+  width:calc(100% + 12px);
+  height:100%;
+  overflow:visible;
+}
+.logo-thread-a,
+.logo-thread-b{
+  transform-box:fill-box!important;
+  transform-origin:center!important;
+  stroke-dasharray:none!important;
+}
+.logo-thread-a{
+  animation:nornaThreadA 5.6s ease-in-out infinite!important;
+}
+.logo-thread-b{
+  animation:nornaThreadB 6.4s ease-in-out infinite reverse!important;
+}
+@keyframes nornaThreadA{
+  0%,100%{transform:translate(-2px,1px) rotate(-.4deg) scaleX(.99)}
+  35%{transform:translate(3px,-4px) rotate(1.2deg) scaleX(1.025)}
+  70%{transform:translate(-1px,3px) rotate(-.8deg) scaleX(1.01)}
+}
+@keyframes nornaThreadB{
+  0%,100%{transform:translate(2px,-1px) rotate(.6deg) scaleX(1.015)}
+  35%{transform:translate(-3px,4px) rotate(-1.3deg) scaleX(.985)}
+  70%{transform:translate(2px,-3px) rotate(.8deg) scaleX(1.02)}
+}
