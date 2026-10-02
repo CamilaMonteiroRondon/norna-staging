@@ -1405,3 +1405,179 @@ body.native-app .top-profile-menu{
   right:0;
   width:145px;
 }
+
+
+/* Android layout refinement — profile below NORNA, safe from camera/status bar */
+body.native-app{
+  background:
+    radial-gradient(circle at 82% 10%,rgba(179,148,176,.12),transparent 28%),
+    radial-gradient(circle at 18% 28%,rgba(225,210,223,.26),transparent 32%),
+    linear-gradient(145deg,#f7f3f5 0%,#efe9ee 52%,#e9e2e8 100%)!important;
+}
+body.native-app #appThreadCanvas{
+  opacity:1!important;
+}
+body.native-app .topbar{
+  top:0!important;
+  min-height:76px!important;
+  height:auto!important;
+  padding:
+    max(18px,env(safe-area-inset-top))
+    18px
+    12px!important;
+  background:rgba(248,244,247,.91)!important;
+  backdrop-filter:blur(18px);
+  justify-content:flex-start!important;
+}
+body.native-app .topbar .top-actions{
+  display:none!important;
+}
+body.native-app .topbar-mobile-brand{
+  display:flex!important;
+  width:100%;
+  align-items:center;
+  justify-content:flex-start;
+}
+body.native-app .topbar-mobile-brand span{
+  font-size:22px!important;
+  letter-spacing:.17em!important;
+}
+body.native-app .content{
+  padding:
+    calc(88px + env(safe-area-inset-top))
+    14px
+    calc(96px + env(safe-area-inset-bottom))!important;
+}
+
+/* User block now lives inside the app, below NORNA and above the current screen */
+.native-profile-card{
+  display:none!important;
+}
+body.native-app .native-profile-card{
+  width:100%;
+  min-height:72px;
+  margin:0 0 16px;
+  padding:10px 12px;
+  border:1px solid rgba(90,72,92,.10);
+  border-radius:20px;
+  background:rgba(251,248,250,.84);
+  box-shadow:0 10px 28px rgba(76,60,77,.055);
+  align-items:center;
+  gap:12px;
+  text-align:left;
+  color:#342f38;
+}
+.native-profile-avatar{
+  width:52px!important;
+  height:52px!important;
+  flex:0 0 52px;
+  border-radius:17px!important;
+  border:1px solid rgba(90,72,92,.10)!important;
+  background:#f0e8ef!important;
+}
+.native-profile-copy{
+  display:grid;
+  gap:2px;
+  min-width:0;
+}
+.native-profile-copy strong{
+  font-size:13px;
+  line-height:1.2;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.native-profile-copy small{
+  color:#756d79;
+  font-size:9px;
+  line-height:1.35;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#nativeProfileAge:empty{display:none}
+
+/* Desktop profile remains desktop-only inside Android */
+body.native-app #topProfileArea{
+  display:none!important;
+}
+
+/* Bottom bar: Início, Perfil, Trilha, Currículo, Vagas, Mais */
+body.native-app .native-bottom-nav{
+  left:8px!important;
+  right:8px!important;
+  bottom:max(8px,env(safe-area-inset-bottom))!important;
+  height:70px!important;
+  padding:6px 4px!important;
+  border-radius:23px!important;
+  display:flex!important;
+  gap:0!important;
+  background:rgba(251,248,250,.97)!important;
+  box-shadow:0 14px 38px rgba(72,57,73,.14)!important;
+}
+body.native-app .native-nav-btn{
+  min-width:0!important;
+  height:56px!important;
+  padding:4px 1px!important;
+  border-radius:15px!important;
+}
+body.native-app .native-nav-btn .native-icon{
+  font-size:17px!important;
+}
+body.native-app .native-nav-btn small{
+  font-size:6.6px!important;
+}
+body.native-app .native-more-nav-btn .native-icon{
+  letter-spacing:1px;
+  font-size:15px!important;
+}
+
+/* More is an actual sheet only when opened — never visible behind another screen */
+body.native-app #nativeMoreSheet:not(.open){
+  display:none!important;
+}
+body.native-app #nativeMoreSheet.open{
+  display:block!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:180!important;
+}
+body.native-app #nativeMoreSheet .native-sheet-backdrop{
+  position:absolute!important;
+  inset:0!important;
+  background:rgba(52,47,56,.30)!important;
+  backdrop-filter:blur(2px);
+}
+body.native-app #nativeMoreSheet .native-sheet-panel{
+  position:absolute!important;
+  left:10px!important;
+  right:10px!important;
+  bottom:calc(88px + env(safe-area-inset-bottom))!important;
+  padding:12px 14px 16px!important;
+  border-radius:24px!important;
+  background:#f8f3f7!important;
+  border:1px solid rgba(90,72,92,.12)!important;
+  box-shadow:0 18px 50px rgba(53,43,55,.19)!important;
+}
+body.native-app #nativeMoreSheet .native-sheet-grid{
+  grid-template-columns:repeat(2,1fr)!important;
+  gap:8px!important;
+}
+body.native-app #nativeMoreSheet .native-sheet-grid button{
+  min-height:72px!important;
+  background:#efe7ed!important;
+  border-color:rgba(90,72,92,.10)!important;
+  color:#4b414d!important;
+}
+
+/* The animated background remains visible through the screens */
+body.native-app .page,
+body.native-app .content{
+  background:transparent!important;
+}
+body.native-app .card,
+body.native-app .stats article,
+body.native-app .opp-card,
+body.native-app .course-card{
+  backdrop-filter:blur(4px);
+}
