@@ -1,0 +1,147 @@
+name: NORNA UI regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app.html"
+      - "style.css"
+      - "script.js"
+      - "mobile.html"
+      - "auth.js"
+      - "server.py"
+      - "norna_extras.py"
+      - ".github/workflows/ui-regression-test.yml"
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Test desktop and Android layouts
+        shell: bash
+        run: |
+          cat > ui-test.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const base='https://norna-staging.onrender.com';
+          const email=`ui-${Date.now()}@example.com`;
+          const password='TesteNorna123!';
+          const browser=await chromium.launch({headless:true});
+
+          async function registerAndLogin(page){
+            page.setDefaultTimeout(60000);
+            page.setDefaultNavigationTimeout(90000);
+            const errors=[];
+            page.on('pageerror', e=>errors.push(e.message));
+
+            await page.goto(base+'/acesso.html?mode=register',{waitUntil:'domcontentloaded'});
+            await page.fill('#registerEmail',email);
+            await page.fill('#registerPassword',password);
+            await page.fill('#registerPassword2',password);
+            await page.click('#registerForm button[type="submit"]');
+            await page.waitForSelector('#authMessage:not(.hidden)');
+            await page.click('#registerForm [data-auth="login"]');
+            await page.fill('#loginEmail',email);
+            await page.fill('#loginPassword',password);
+            await page.click('#loginForm button[type="submit"]');
+            await page.waitForURL('**/app.html');
+            await page.waitForSelector('#page-dashboard.active');
+            await page.waitForTimeout(1200);
+            if(errors.length) throw new Error('JS errors: '+errors.join(' | '));
+          }
+
+          const desktop=await browser.newPage();
+          await registerAndLogin(desktop);
+
+          await desktop.click('[data-page="perfil"]');
+          await desktop.fill('#profileName','Camila Monteiro');
+          await desktop.fill('#profileAge','32');
+          await desktop.fill('#profileArea','Ciência de Dados');
+          await desktop.selectOption('#profileLevel',{label:'Júnior'});
+          await desktop.waitForTimeout(1200);
+
+          const topText=await desktop.textContent('#topProfileChip');
+          console.log('TOP PROFILE:',topText);
+          if(!topText.includes('Camila Monteiro')) throw new Error('Nome não apareceu no topo');
+          if(!topText.includes('32 anos')) throw new Error('Idade não apareceu no topo');
+          if(!topText.includes('Ciência de Dados Júnior')) throw new Error('Headline não apareceu no topo');
+
+          await desktop.click('[data-page="ia"]');
+          if(await desktop.locator('.page.active').count()!==1) throw new Error('Mais de uma tela ficou ativa');
+          if(!(await desktop.locator('#page-ia').evaluate(el=>el.classList.contains('active')))) throw new Error('IA não abriu em tela própria');
+
+          await desktop.click('[data-page="curriculo"]');
+          await desktop.setInputFiles('#resumeFile',{
+            name:'curriculo-teste.txt',
+            mimeType:'text/plain',
+            buffer:Buffer.from(`Camila Monteiro
+Ciência de Dados Júnior
+
+RESUMO PROFISSIONAL
+Profissional em transição para ciência de dados.
+
+COMPETÊNCIAS TÉCNICAS
+Python
+Pandas
+SQL
+Python
+
+FORMAÇÃO ACADÊMICA
+Ciências Biológicas — Universidade Iguaçu — 2015
+Técnico em Análises Clínicas — Cruz Vermelha — 2018
+
+EXPERIÊNCIA PROFISSIONAL
+Analista de Dados Júnior — Empresa Teste — 2025 - atual
+Análise de dados com Python.
+`)
+          });
+          await desktop.waitForFunction(()=>document.querySelector('#resumeImportStatus')?.textContent.includes('Currículo lido'));
+          const preview=await desktop.textContent('#resumePreview');
+          if(!preview.includes('Camila Monteiro')) throw new Error('Prévia do currículo não carregou');
+          const stored=await desktop.evaluate(()=>JSON.parse(localStorage.getItem('norna_v6_data')));
+          const pythonCount=(stored.skills||[]).filter(x=>x.name==='Python').length;
+          if(pythonCount!==1) throw new Error('Competência duplicada no currículo');
+          if((stored.education||[]).length<2) throw new Error('Formação não foi identificada');
+
+          await desktop.click('#editResume');
+          await desktop.waitForSelector('#resumeEditorText');
+          if(!(await desktop.inputValue('#resumeEditorText')).includes('Camila Monteiro')) throw new Error('Editor de currículo não abriu o texto');
+
+          const nativeContext=await browser.newContext({
+            userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36 NORNA-Android/0.2',
+            viewport:{width:390,height:844}
+          });
+          const native=await nativeContext.newPage();
+          await native.goto(base+'/mobile.html?mode=login',{waitUntil:'domcontentloaded'});
+          await native.fill('#loginEmail',email);
+          await native.fill('#loginPassword',password);
+          await native.click('#loginForm button[type="submit"]');
+          await native.waitForURL('**/app.html');
+          await native.waitForSelector('body.native-app');
+          await native.waitForSelector('#nativeBottomNav');
+          if(await native.locator('.page.active').count()!==1) throw new Error('Android mostrou várias telas ao mesmo tempo');
+          if((await native.textContent('body')).includes('BEM-VINDA DE VOLTA')) throw new Error('Texto antigo de login ainda aparece');
+
+          await native.click('[data-mobile-page="curriculo"]');
+          await native.waitForSelector('#page-curriculo.active');
+          if(await native.locator('.page.active').count()!==1) throw new Error('Android não separou as telas do menu');
+
+          await native.click('[data-mobile-page="ia"]');
+          await native.waitForSelector('#page-ia.active');
+
+          console.log('NORNA UI REGRESSION OK');
+          await nativeContext.close();
+          await browser.close();
+          EOF
+          node ui-test.mjs
