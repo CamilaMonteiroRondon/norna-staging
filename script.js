@@ -1,26 +1,32 @@
 const KEY="norna_v6_data", THEME="norna_v6_theme";
-const emptyData=()=>({profile:{photo:"",name:"",area:"",role:"",level:"",mode:"",location:"",study:"",opportunity:"",about:""},education:[],experience:[],journey:[],courses:[],skills:[],savedJobs:[],savedLearning:[]});
+const IS_NATIVE_APP=/NORNA-Android/i.test(navigator.userAgent);
+const emptyData=()=>({
+  profile:{photo:"",name:"",age:"",area:"",role:"",level:"",mode:"",location:"",study:"",opportunity:"",about:""},
+  education:[],experience:[],journey:[],courses:[],skills:[],savedJobs:[],savedLearning:[],
+  resumeText:"",resumeFileName:""
+});
 let data=load(), currentCourseFilter="Todos", currentJobTab="recommended", currentLearningTab="recommended", recommendedJobs=[], recommendedLearning=[], modalHandler=null, currentUser=null, syncTimer=null;
+document.body.classList.toggle("native-app",IS_NATIVE_APP);
 
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):emptyData()}catch{return emptyData()}}
-function normalizeData(source){const base=emptyData();source=source||{};return {...base,...source,profile:{...base.profile,...(source.profile||{})},education:Array.isArray(source.education)?source.education:[],experience:Array.isArray(source.experience)?source.experience:[],journey:Array.isArray(source.journey)?source.journey:[],courses:Array.isArray(source.courses)?source.courses:[],skills:Array.isArray(source.skills)?source.skills:[],savedJobs:Array.isArray(source.savedJobs)?source.savedJobs:[],savedLearning:Array.isArray(source.savedLearning)?source.savedLearning:[]}}
+function normalizeData(source){const base=emptyData();source=source||{};return {...base,...source,profile:{...base.profile,...(source.profile||{})},education:Array.isArray(source.education)?source.education:[],experience:Array.isArray(source.experience)?source.experience:[],journey:Array.isArray(source.journey)?source.journey:[],courses:Array.isArray(source.courses)?source.courses:[],skills:Array.isArray(source.skills)?source.skills:[],savedJobs:Array.isArray(source.savedJobs)?source.savedJobs:[],savedLearning:Array.isArray(source.savedLearning)?source.savedLearning:[],resumeText:String(source.resumeText||""),resumeFileName:String(source.resumeFileName||"")}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));clearTimeout(syncTimer);syncTimer=setTimeout(syncData,220)}
 async function syncData(){
   try{
     const r=await fetch("/api/data",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
-    if(r.status===401){location.replace("/acesso.html?mode=login");return}
+    if(r.status===401){location.replace(IS_NATIVE_APP?"/mobile.html?mode=login":"/acesso.html?mode=login");return}
     if(!r.ok)console.error("Falha ao salvar dados NORNA:",r.status);
   }catch(err){console.error("Falha de rede ao salvar dados NORNA:",err)}
 }
 async function bootstrap(){
   try{
     const me=await fetch("/api/me");
-    if(me.status===401){location.replace("/acesso.html?mode=login");return}
+    if(me.status===401){location.replace(IS_NATIVE_APP?"/mobile.html?mode=login":"/acesso.html?mode=login");return}
     if(!me.ok)throw new Error("Falha ao validar a sessão: "+me.status);
     currentUser=await me.json();
 
     const r=await fetch("/api/data");
-    if(r.status===401){location.replace("/acesso.html?mode=login");return}
+    if(r.status===401){location.replace(IS_NATIVE_APP?"/mobile.html?mode=login":"/acesso.html?mode=login");return}
     if(!r.ok)throw new Error("Falha ao carregar os dados: "+r.status);
 
     const payload=await r.json();
@@ -61,15 +67,52 @@ function matchInfo(text=""){
 function google(q){window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer")}
 
 // NAV
+function pageLabel(page){
+  const desktop=document.querySelector(`.nav-btn[data-page="${page}"]`);
+  return desktop?.textContent?.trim()||"NORNA";
+}
+
+function go(page){
+  const target=document.getElementById("page-"+page);
+  if(!target)return;
+
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  document.querySelectorAll(".native-nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.mobilePage===page));
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  target.classList.add("active");
+
+  const title=document.getElementById("pageTitle");
+  if(title)title.textContent=pageLabel(page);
+
+  closeNativeMore();
+  renderAll();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
 document.querySelectorAll(".nav-btn").forEach(b=>b.onclick=()=>go(b.dataset.page));
 document.querySelectorAll(".go-page").forEach(b=>b.onclick=()=>go(b.dataset.go));
-function go(page){document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));document.getElementById("page-"+page).classList.add("active");document.getElementById("pageTitle").textContent=document.querySelector(`.nav-btn[data-page="${page}"]`).textContent;renderAll()}
+document.querySelectorAll("[data-mobile-page]").forEach(b=>b.onclick=()=>go(b.dataset.mobilePage));
+
+const nativeMoreSheet=document.getElementById("nativeMoreSheet");
+function openNativeMore(){
+  if(!nativeMoreSheet)return;
+  nativeMoreSheet.classList.add("open");
+  nativeMoreSheet.setAttribute("aria-hidden","false");
+}
+function closeNativeMore(){
+  if(!nativeMoreSheet)return;
+  nativeMoreSheet.classList.remove("open");
+  nativeMoreSheet.setAttribute("aria-hidden","true");
+}
+const nativeMoreButton=document.getElementById("nativeMoreButton");
+if(nativeMoreButton)nativeMoreButton.onclick=openNativeMore;
+document.querySelectorAll("[data-close-native-more]").forEach(b=>b.onclick=closeNativeMore);
 
 // VISUAL / RESET
 document.body.classList.remove("light","dark");
 localStorage.removeItem(THEME);
 document.getElementById("resetAll").onclick=()=>{if(confirm("Apagar todos os dados da NORNA neste navegador?")){data=emptyData();recommendedJobs=[];save();renderAll();toast("Dados zerados.")}};
-document.getElementById("logoutButton").onclick=async()=>{try{await fetch("/api/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})}catch{}localStorage.removeItem(KEY);location.href="/"};
+document.getElementById("logoutButton").onclick=async()=>{try{await fetch("/api/logout",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})}catch{}localStorage.removeItem(KEY);location.href=IS_NATIVE_APP?"/mobile.html?mode=login":"/"};
 
 // MODAL
 const modal=document.getElementById("modal");
@@ -81,14 +124,26 @@ document.getElementById("modalSave").onclick=()=>modalHandler&&modalHandler();
 modal.onclick=e=>{if(e.target===modal)closeModal()};
 
 // PERFIL
-const pf={name:"profileName",area:"profileArea",role:"profileRole",level:"profileLevel",mode:"profileMode",location:"profileLocation",study:"profileStudy",opportunity:"profileOpportunity",about:"profileAbout"};
+const pf={name:"profileName",age:"profileAge",area:"profileArea",role:"profileRole",level:"profileLevel",mode:"profileMode",location:"profileLocation",study:"profileStudy",opportunity:"profileOpportunity",about:"profileAbout"};
 document.getElementById("saveProfile").onclick=()=>{Object.entries(pf).forEach(([k,id])=>data.profile[k]=val(id));save();renderAll();toast("Perfil salvo.")};
 let profileAutosaveTimer=null;
 
+function profileHeadline(){
+  const p=data.profile;
+  if(p.role)return p.role;
+  return [p.area,p.level].filter(Boolean).join(" ")||"Perfil profissional";
+}
+
 function updateProfileHeader(){
-  document.getElementById("topName").textContent=data.profile.name||"Seu perfil";
+  const p=data.profile;
+  document.getElementById("topName").textContent=p.name||"Seu perfil";
+  const age=document.getElementById("topAge");
+  if(age)age.textContent=p.age?`${p.age} anos`:"";
   const meta=document.getElementById("topProfileMeta");
-  if(meta)meta.textContent=[data.profile.role,data.profile.area].filter(Boolean).join(" • ")||"Ver meu perfil";
+  if(meta)meta.textContent=profileHeadline();
+
+  const hello=document.getElementById("dashHello");
+  if(hello)hello.textContent=p.name?`Olá, ${p.name.split(" ")[0]}.`:"Olá.";
 }
 
 Object.entries(pf).forEach(([k,id])=>{
@@ -112,24 +167,21 @@ document.getElementById("profilePhoto").onchange=e=>{const f=e.target.files?.[0]
 document.getElementById("removePhoto").onclick=()=>{data.profile.photo="";save();renderAll()};
 function placeholder(){return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" rx="34" fill="#c6b8af"/><circle cx="80" cy="61" r="28" fill="#9d6b66"/><path d="M35 143c4-31 22-46 45-46s41 15 45 46" fill="#9d6b66"/></svg>`)}
 function renderProfile(){
-  Object.entries(pf).forEach(([k,id])=>document.getElementById(id).value=data.profile[k]||"");
+  Object.entries(pf).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el)el.value=data.profile[k]||"";
+  });
   const p=data.profile.photo||placeholder();
-  document.getElementById("profileAvatar").src=p;
-  document.getElementById("topAvatar").src=p;
-  document.getElementById("topName").textContent=data.profile.name||"Seu perfil";
-  const meta=document.getElementById("topProfileMeta");
-  if(meta)meta.textContent=[data.profile.role,data.profile.area].filter(Boolean).join(" • ")||"Ver meu perfil";
+  const profileAvatar=document.getElementById("profileAvatar");
+  const topAvatar=document.getElementById("topAvatar");
+  const dashAvatar=document.getElementById("dashAvatar");
+  if(profileAvatar)profileAvatar.src=p;
+  if(topAvatar)topAvatar.src=p;
+  if(dashAvatar)dashAvatar.src=p;
+  updateProfileHeader();
 }
 const topProfileChip=document.getElementById("topProfileChip");
 if(topProfileChip)topProfileChip.onclick=()=>go("perfil");
-
-// CURRÍCULO: FORMAÇÃO / EXPERIÊNCIA
-document.getElementById("addEducation").onclick=()=>educationModal();
-document.getElementById("addExperience").onclick=()=>experienceModal();
-function educationModal(i=null){const x=i===null?{}:data.education[i];openModal(i===null?"Adicionar formação":"Editar formação",`<div class="field"><label>Curso / formação</label><input id="mCourse" value="${esc(x.course||"")}"></div><div class="field"><label>Instituição</label><input id="mInstitution" value="${esc(x.institution||"")}"></div><div class="field"><label>Tipo</label><input id="mType" value="${esc(x.type||"")}"></div><div class="field"><label>Período</label><input id="mPeriod" value="${esc(x.period||"")}"></div>`,()=>{const o={course:val("mCourse"),institution:val("mInstitution"),type:val("mType"),period:val("mPeriod")};if(!o.course)return alert("Informe a formação.");if(i===null)data.education.push(o);else data.education[i]=o;save();closeModal();renderAll();toast("Formação salva.")})}
-function experienceModal(i=null){const x=i===null?{}:data.experience[i];openModal(i===null?"Adicionar experiência":"Editar experiência",`<div class="field"><label>Cargo</label><input id="mRole" value="${esc(x.role||"")}"></div><div class="field"><label>Empresa</label><input id="mCompany" value="${esc(x.company||"")}"></div><div class="field"><label>Período</label><input id="mPeriod" value="${esc(x.period||"")}"></div><div class="field"><label>Descrição</label><textarea id="mDescription">${esc(x.description||"")}</textarea></div>`,()=>{const o={role:val("mRole"),company:val("mCompany"),period:val("mPeriod"),description:val("mDescription")};if(!o.role)return alert("Informe o cargo.");if(i===null)data.experience.push(o);else data.experience[i]=o;save();closeModal();renderAll();toast("Experiência salva.")})}
-function renderSimple(listId,emptyId,arr,title,sub,type){const box=document.getElementById(listId);box.innerHTML="";arr.forEach((x,i)=>{const el=document.createElement("div");el.className="stack-item";el.innerHTML=`<h4>${esc(title(x))}</h4><p>${esc(sub(x))}</p><div class="item-actions"><button data-edit="${type}" data-i="${i}">Editar</button><button class="danger" data-del="${type}" data-i="${i}">Excluir</button></div>`;box.appendChild(el)});document.getElementById(emptyId).classList.toggle("hidden",arr.length>0)}
-document.getElementById("page-curriculo").addEventListener("click",e=>{const a=e.target.closest("[data-edit]"),d=e.target.closest("[data-del]");if(a)(a.dataset.edit==="education"?educationModal:experienceModal)(+a.dataset.i);if(d&&confirm("Excluir este item?")){(d.dataset.del==="education"?data.education:data.experience).splice(+d.dataset.i,1);save();renderAll()}});
 
 // JORNADA
 document.getElementById("addJourney").onclick=()=>journeyModal();
@@ -151,73 +203,176 @@ function renderCourses(){const arr=data.courses.map((x,i)=>({...x,i})).filter(x=
 document.querySelectorAll(".course-filter").forEach(b=>b.onclick=()=>{document.querySelectorAll(".course-filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentCourseFilter=b.dataset.filter;renderCourses()});
 document.getElementById("courseList").onclick=e=>{const o=e.target.closest("[data-copen]"),a=e.target.closest("[data-cedit]"),d=e.target.closest("[data-cdel]");if(o){const x=data.courses[+o.dataset.copen];if(!x.link)return alert("Este curso não possui link.");window.open(normalUrl(x.link),"_blank","noopener,noreferrer")}if(a)courseModal(+a.dataset.cedit);if(d&&confirm("Excluir este curso?")){data.courses.splice(+d.dataset.cdel,1);save();renderAll()}};
 
-// CURRÍCULO AUTOMÁTICO
-function renderResume(){renderSimple("educationList","educationEmpty",data.education,x=>`${x.course}${x.institution?" — "+x.institution:""}`,x=>`${x.type||""}${x.period?" • "+x.period:""}`,"education");renderSimple("experienceList","experienceEmpty",data.experience,x=>`${x.role}${x.company?" — "+x.company:""}`,x=>`${x.period||""}${x.description?" • "+x.description:""}`,"experience");const p=data.profile,skills=data.skills.filter(s=>s.level>0).map(s=>s.name).join(" • ");document.getElementById("resumePreview").innerHTML=`<h2>${esc(p.name||"Seu nome")}</h2><p>${esc([p.role,p.area,p.location].filter(Boolean).join(" • ")||"Preencha seu perfil.")}</p>${p.about?`<h3>Resumo profissional</h3><p>${esc(p.about)}</p>`:""}${data.education.length?`<h3>Formação</h3><ul>${data.education.map(x=>`<li>${esc(x.course)}${x.institution?" — "+esc(x.institution):""}${x.period?" • "+esc(x.period):""}</li>`).join("")}</ul>`:""}${data.experience.length?`<h3>Experiência</h3><ul>${data.experience.map(x=>`<li><strong>${esc(x.role)}</strong>${x.company?" — "+esc(x.company):""}${x.description?"<br>"+esc(x.description):""}</li>`).join("")}</ul>`:""}${skills?`<h3>Competências</h3><p>${esc(skills)}</p>`:""}${data.courses.length?`<h3>Cursos</h3><ul>${data.courses.map(x=>`<li>${esc(x.name)}${x.platform?" — "+esc(x.platform):""}</li>`).join("")}</ul>`:""}`}
-function mergeExtractedResume(x){
-  if(!x)return;
-  const p=x.profile||{};
-  ["name","about","area","role"].forEach(k=>{if(p[k]&&!data.profile[k])data.profile[k]=p[k]});
-  (x.education||[]).forEach(item=>{
-    if(item.course&&!data.education.some(e=>(e.course||"").toLowerCase()===(item.course||"").toLowerCase()))data.education.push(item);
-  });
-  (x.experience||[]).forEach(item=>{
-    if(item.role&&!data.experience.some(e=>(e.role||"").toLowerCase()===(item.role||"").toLowerCase()&&(e.company||"").toLowerCase()===(item.company||"").toLowerCase()))data.experience.push(item);
-  });
-  (x.skills||[]).forEach(item=>{
-    if(item.name&&!data.skills.some(e=>(e.name||"").toLowerCase()===(item.name||"").toLowerCase()))data.skills.push({name:item.name,level:item.level||40});
-  });
-  (x.courses||[]).forEach(item=>{
-    if(item.name&&!data.courses.some(e=>(e.name||"").toLowerCase()===(item.name||"").toLowerCase()))data.courses.push(item);
+// CURRÍCULO
+function dedupeBy(items,keyFn){
+  const seen=new Set();
+  return (items||[]).filter(item=>{
+    const key=String(keyFn(item)||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+    if(!key||seen.has(key))return false;
+    seen.add(key);
+    return true;
   });
 }
+
+function replaceResumeAnalysis(x){
+  if(!x)return;
+  const p=x.profile||{};
+
+  // O currículo ajuda a completar o perfil, mas não substitui escolhas que a pessoa já fez.
+  ["name","about","area","role"].forEach(k=>{if(p[k]&&!data.profile[k])data.profile[k]=p[k]});
+
+  data.education=dedupeBy(x.education||[],item=>`${item.course||""}|${item.institution||""}`);
+  data.experience=dedupeBy(x.experience||[],item=>`${item.role||""}|${item.company||""}|${item.period||""}`);
+  data.skills=dedupeBy((x.skills||[]).map(item=>({name:item.name,level:item.level||40})),item=>item.name);
+}
+
+function structuredResumeText(){
+  const p=data.profile;
+  const lines=[];
+  if(p.name)lines.push(p.name);
+  const headline=[profileHeadline(),p.location].filter(Boolean).join(" • ");
+  if(headline)lines.push(headline);
+  if(p.about)lines.push("", "RESUMO PROFISSIONAL", p.about);
+
+  if(data.education.length){
+    lines.push("", "FORMAÇÃO");
+    data.education.forEach(x=>lines.push([x.course,x.institution,x.period].filter(Boolean).join(" — ")));
+  }
+  if(data.experience.length){
+    lines.push("", "EXPERIÊNCIA");
+    data.experience.forEach(x=>{
+      lines.push([x.role,x.company,x.period].filter(Boolean).join(" — "));
+      if(x.description)lines.push(x.description);
+    });
+  }
+  if(data.skills.length){
+    lines.push("", "COMPETÊNCIAS", data.skills.map(x=>x.name).filter(Boolean).join(", "));
+  }
+  return lines.join("\n").trim();
+}
+
+function renderResume(){
+  const preview=document.getElementById("resumePreview");
+  const fileName=document.getElementById("resumeFileName");
+  const editButton=document.getElementById("editResume");
+  if(!preview)return;
+
+  const text=(data.resumeText||structuredResumeText()).trim();
+  if(fileName)fileName.textContent=data.resumeFileName||"Nenhum currículo enviado.";
+  if(editButton)editButton.disabled=!text;
+
+  if(!text){
+    preview.innerHTML='<div class="resume-empty"><span>▤</span><h3>Seu currículo aparecerá aqui</h3><p>Envie um arquivo para a NORNA ler e organizar.</p></div>';
+    return;
+  }
+
+  preview.innerHTML=`<pre class="resume-text-preview">${esc(text)}</pre>`;
+}
+
+async function analyzeResumeText(text,status){
+  const r=await fetch("/api/resume/analyze",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text})
+  });
+  const j=await r.json();
+  if(!r.ok)throw new Error(j.error||"Não foi possível analisar o currículo.");
+  replaceResumeAnalysis(j.extracted);
+  if(status)status.textContent=`Currículo lido: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) identificadas.`;
+  return j;
+}
+
 async function extractResumeTextFromFile(file){
   const name=(file.name||"").toLowerCase();
   if(name.endsWith(".txt")||name.endsWith(".md"))return await file.text();
+
   if(name.endsWith(".pdf")){
     if(!window.pdfjsLib)throw new Error("O leitor de PDF ainda não carregou. Atualize a página e tente novamente.");
     pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     const buf=await file.arrayBuffer();
     const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-    const parts=[];
-    for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),content=await page.getTextContent();parts.push(content.items.map(x=>x.str).join(" "))}
-    return parts.join("\n");
+    const pages=[];
+
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      let lastY=null,line=[],lines=[];
+
+      for(const item of content.items){
+        const y=item.transform?.[5]??0;
+        if(lastY!==null&&Math.abs(y-lastY)>3){
+          if(line.length)lines.push(line.join(" "));
+          line=[];
+        }
+        if(item.str?.trim())line.push(item.str.trim());
+        lastY=y;
+      }
+      if(line.length)lines.push(line.join(" "));
+      pages.push(lines.join("\n"));
+    }
+    return pages.join("\n\n");
   }
+
   if(name.endsWith(".docx")){
     if(!window.mammoth)throw new Error("O leitor de Word ainda não carregou. Atualize a página e tente novamente.");
     const buf=await file.arrayBuffer();
     const result=await mammoth.extractRawText({arrayBuffer:buf});
     return result.value||"";
   }
+
   throw new Error("Formato não suportado. Use PDF, DOCX, TXT ou MD.");
 }
-document.getElementById("resumeFile").onchange=async e=>{
-  const f=e.target.files?.[0];if(!f)return;
+
+const resumeFile=document.getElementById("resumeFile");
+if(resumeFile)resumeFile.onchange=async e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
   const status=document.getElementById("resumeImportStatus");
-  status.textContent="Lendo e analisando o currículo...";
+  status.textContent="Lendo e organizando o currículo...";
+
   try{
-    const text=await extractResumeTextFromFile(f);
+    const text=await extractResumeTextFromFile(file);
     if(text.trim().length<20)throw new Error("Não consegui extrair texto suficiente desse arquivo.");
-    document.getElementById("resumeImport").value=text;
-    const r=await fetch("/api/resume/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
-    const j=await r.json();
-    if(!r.ok)throw new Error(j.error||"Não foi possível analisar o currículo.");
-    mergeExtractedResume(j.extracted);save();renderAll();
-    status.textContent=`Currículo analisado: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) detectadas. Revise os dados.`;
-    toast("Currículo importado.");
-  }catch(err){status.textContent=err.message||"Não foi possível analisar o arquivo."}
+
+    data.resumeText=text.trim();
+    data.resumeFileName=file.name;
+    await analyzeResumeText(data.resumeText,status);
+    save();
+    renderAll();
+    toast("Currículo atualizado.");
+  }catch(err){
+    status.textContent=err.message||"Não foi possível analisar o arquivo.";
+  }
 };
-document.getElementById("analyzeResume").onclick=async()=>{
-  const t=val("resumeImport");if(!t)return alert("Cole o texto do currículo ou escolha um arquivo.");
-  const status=document.getElementById("resumeImportStatus");status.textContent="Analisando...";
-  try{
-    const r=await fetch("/api/resume/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t})});
-    const j=await r.json();if(!r.ok)throw new Error(j.error||"Não foi possível analisar.");
-    mergeExtractedResume(j.extracted);save();renderAll();
-    status.textContent=`Análise concluída: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) detectadas.`;
-    toast("Currículo analisado.");
-  }catch(err){status.textContent=err.message}
+
+const editResume=document.getElementById("editResume");
+if(editResume)editResume.onclick=()=>{
+  const current=(data.resumeText||structuredResumeText()).trim();
+  if(!current)return;
+
+  openModal(
+    "Editar currículo",
+    `<div class="field"><label>Conteúdo do currículo</label><textarea id="resumeEditorText" class="resume-editor-text">${esc(current)}</textarea></div><p class="muted">Ao salvar, a NORNA lê o texto novamente e atualiza formação, experiência e competências detectadas.</p>`,
+    async()=>{
+      const text=document.getElementById("resumeEditorText").value.trim();
+      if(text.length<20)return alert("O currículo ficou curto demais.");
+      const btn=document.getElementById("modalSave");
+      btn.disabled=true;
+      try{
+        data.resumeText=text;
+        await analyzeResumeText(text,null);
+        save();
+        closeModal();
+        renderAll();
+        toast("Currículo editado.");
+      }catch(err){
+        alert(err.message||"Não foi possível salvar o currículo.");
+      }finally{
+        btn.disabled=false;
+      }
+    }
+  );
 };
-document.getElementById("downloadResume").onclick=()=>{const p=data.profile;let t=`${p.name||"CURRÍCULO"}\n${[p.role,p.area,p.location].filter(Boolean).join(" | ")}\n\n`;if(p.about)t+=`RESUMO\n${p.about}\n\n`;if(data.education.length)t+=`FORMAÇÃO\n${data.education.map(x=>`- ${x.course}${x.institution?" — "+x.institution:""}`).join("\n")}\n\n`;if(data.experience.length)t+=`EXPERIÊNCIA\n${data.experience.map(x=>`- ${x.role}${x.company?" — "+x.company:""}\n  ${x.description||""}`).join("\n")}\n\n`;if(data.skills.length)t+=`COMPETÊNCIAS\n${data.skills.filter(s=>s.level>0).map(s=>s.name).join(", ")}\n\n`;if(data.courses.length)t+=`CURSOS\n${data.courses.map(x=>`- ${x.name}${x.platform?" — "+x.platform:""}`).join("\n")}`;const b=new Blob([t],{type:"text/plain;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="curriculo-NORNA.txt";a.click();URL.revokeObjectURL(a.href)};
 
 // VAGAS AO VIVO + COMPATIBILIDADE
 document.getElementById("findJobs").onclick=async()=>{
@@ -289,7 +444,39 @@ document.getElementById("page-formacoes").onclick=e=>{
 document.getElementById("aiAsk").onclick=async()=>{const q=val("aiQuestion");if(!q)return alert("Escreva uma pergunta para a NORNA.");const box=document.getElementById("aiAnswer");box.textContent="Pensando no seu fio...";try{const r=await fetch("/api/ai/coach",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q})});const j=await r.json();box.textContent=r.ok?(j.answer||"Sem resposta agora."):(j.error||"Não foi possível consultar a NORNA IA.")}catch{box.textContent="A camada de IA não respondeu agora."}};
 
 // DASHBOARD
-function renderDashboard(){document.getElementById("statSkills").textContent=data.skills.length;document.getElementById("statCourses").textContent=data.courses.length;document.getElementById("statJobs").textContent=data.savedJobs.length;document.getElementById("statLearning").textContent=data.savedLearning.length;const p=data.profile;document.getElementById("dashGoal").textContent=p.role||p.area||"Ainda não definido";document.getElementById("dashGoalText").textContent=p.area?`Área: ${p.area}${p.mode?" • "+p.mode:""}`:"Complete seu perfil para começar.";let next="Complete seu perfil",txt="Depois disso, adicione suas competências.";if(p.area||p.role){next="Adicione suas competências";txt="Cadastre o que você sabe e o que quer desenvolver."}if(data.skills.length){next="Organize sua jornada";txt="Adicione cursos e etapas."}if(data.courses.length||data.journey.length){next="Procure oportunidades";txt="A NORNA já pode comparar seu perfil com vagas e formações."}document.getElementById("dashNext").textContent=next;document.getElementById("dashNextText").textContent=txt;const lines=[];if(p.area)lines.push(["Área desejada",p.area]);if(data.skills.length)lines.push(["Competências",data.skills.length]);if(data.education.length)lines.push(["Formações no currículo",data.education.length]);if(data.experience.length)lines.push(["Experiências",data.experience.length]);document.getElementById("dashboardSummary").innerHTML=lines.length?`<div class="stack">${lines.map(x=>`<div class="stack-item"><p>${esc(x[0])}</p><h4>${esc(x[1])}</h4></div>`).join("")}</div>`:"Ainda não há dados suficientes.";const jobs=data.savedJobs.map(x=>({...x,...matchInfo(`${x.title} ${x.description||""}`)})).sort((a,b)=>b.score-a.score);document.getElementById("bestJob").textContent=jobs[0]?`${jobs[0].title} — ${jobs[0].score}%`:"Nenhuma ainda";const ls=data.savedLearning.map(x=>({...x,score:matchInfo(`${x.program} ${x.topics||""}`).score})).sort((a,b)=>b.score-a.score);document.getElementById("bestLearning").textContent=ls[0]?`${ls[0].program} — ${ls[0].score}%`:"Nenhuma ainda"}
+function profileCompletion(){
+  const p=data.profile;
+  const checks=[p.name,p.age,p.area||p.role,p.level,p.mode,p.location,p.about];
+  return Math.round(checks.filter(Boolean).length/checks.length*100);
+}
+
+function renderDashboard(){
+  const p=data.profile;
+  const statProfile=document.getElementById("statProfile");
+  const statJourney=document.getElementById("statJourney");
+  const statSkills=document.getElementById("statSkills");
+  if(statProfile)statProfile.textContent=profileCompletion()+"%";
+  if(statJourney)statJourney.textContent=data.journey.length;
+  if(statSkills)statSkills.textContent=data.skills.length;
+
+  const dashGoal=document.getElementById("dashGoal");
+  const dashGoalText=document.getElementById("dashGoalText");
+  if(dashGoal)dashGoal.textContent=profileHeadline()||"Ainda não definido";
+  if(dashGoalText)dashGoalText.textContent=p.area?[`Área: ${p.area}`,p.mode,p.location].filter(Boolean).join(" • "):"Complete seu perfil para começar.";
+
+  let next="Complete seu perfil";
+  let txt="Nome, idade, objetivo e preferências ajudam a NORNA a personalizar sua jornada.";
+  if(profileCompletion()>=70){next="Envie seu currículo";txt="Seu perfil já tem uma boa base. Agora adicione seu currículo."}
+  if(data.resumeText){next="Organize sua jornada";txt="Com o currículo lido, escolha os próximos estudos e etapas."}
+  if(data.journey.length){next="Acompanhe sua evolução";txt="Continue atualizando suas etapas conforme avança."}
+
+  const dashNext=document.getElementById("dashNext");
+  const dashNextText=document.getElementById("dashNextText");
+  if(dashNext)dashNext.textContent=next;
+  if(dashNextText)dashNextText.textContent=txt;
+
+  updateProfileHeader();
+}
 
 function renderAll(){renderProfile();renderJourney();renderSkills();renderCourses();renderResume();renderJobs();renderLearning();renderDashboard();setJobTab();setLearningTab()}
 bootstrap();
