@@ -27,11 +27,27 @@ def unique(items, key):
 def section_key(line):
     norm = fold(line).strip(" :-–—")
     aliases = {
-        "education": ["formacao", "formacao academica", "educacao", "escolaridade", "education"],
-        "experience": ["experiencia", "experiencia profissional", "historico profissional", "professional experience", "work experience"],
-        "skills": ["competencias", "habilidades", "conhecimentos", "tecnologias", "skills", "technical skills"],
-        "courses": ["cursos", "cursos e certificacoes", "certificacoes", "certificados", "courses", "certifications"],
-        "summary": ["resumo", "resumo profissional", "perfil profissional", "sobre mim", "objetivo profissional", "objetivo"]
+        "education": [
+            "formacao", "formacao academica", "educacao", "escolaridade", "education",
+            "graduacao", "formacao superior"
+        ],
+        "experience": [
+            "experiencia", "experiencia profissional", "historico profissional",
+            "professional experience", "work experience"
+        ],
+        "skills": [
+            "competencias", "competencias tecnicas", "habilidades", "habilidades tecnicas",
+            "conhecimentos", "tecnologias", "skills", "technical skills", "hard skills"
+        ],
+        "courses": [
+            "cursos", "cursos e certificacoes", "certificacoes", "certificados",
+            "courses", "certifications", "formacao em tecnologia", "formacao complementar"
+        ],
+        "summary": [
+            "resumo", "resumo profissional", "perfil profissional", "sobre mim",
+            "objetivo profissional", "objetivo"
+        ],
+        "projects": ["projetos", "projetos pessoais", "projetos academicos", "projects"]
     }
     for key, values in aliases.items():
         if norm in values:
@@ -144,38 +160,119 @@ KNOWN_SKILLS = [
     "Análise de Dados","Estatística"
 ]
 
+def contains_term(text, term):
+    normalized = fold(text)
+    target = fold(term).strip()
+    if not target:
+        return False
+    pattern = r"(?<![a-z0-9])" + re.escape(target) + r"(?![a-z0-9])"
+    return re.search(pattern, normalized) is not None
+
+def clean_resume_items(items, fields):
+    seen, out = set(), []
+    for item in items or []:
+        key = "|".join(fold(item.get(field, "")).strip() for field in fields)
+        key = re.sub(r"\s+", " ", key)
+        if not key.strip("| ") or key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
+
+def parse_courses(lines):
+    out = []
+    for raw in lines or []:
+        line = raw.strip(" •|-")
+        if len(line) < 4 or len(line) > 220:
+            continue
+        low = fold(line)
+        if "http://" in low or "https://" in low or "linkedin" in low or "github" in low:
+            continue
+        parts = [p.strip() for p in re.split(r"\s+[|—–-]\s+", line) if p.strip()]
+        name = parts[0] if parts else line
+        platform = parts[1] if len(parts) > 1 else ""
+        if fold(name) in ("curso", "cursos", "certificacao", "certificacoes"):
+            continue
+        out.append({"name": name[:180], "platform": platform[:140], "status": "Concluído", "progress": 100})
+    return clean_resume_items(out, ["name", "platform"])[:16]
+
 def analyze_resume(text):
-    raw_lines = [re.sub(r"\s+", " ", x).strip() for x in re.split(r"[\r\n]+", text or "")]
+    raw = (text or "").replace("\u2022", "\n• ")
+    raw_lines = [re.sub(r"\s+", " ", x).strip() for x in re.split(r"[\r\n]+", raw)]
     lines = [x for x in raw_lines if x]
-    sections = {"header": [], "education": [], "experience": [], "skills": [], "courses": [], "summary": []}
+
+    sections = {
+        "header": [], "education": [], "experience": [], "skills": [],
+        "courses": [], "summary": [], "projects": []
+    }
+    seen_sections = set()
     current = "header"
+
     for line in lines:
         key = section_key(line)
         if key:
             current = key
+            seen_sections.add(key)
             continue
         sections.setdefault(current, []).append(line)
-    low = fold(text)
-    skills = [{"name": s, "level": 40} for s in KNOWN_SKILLS if fold(s) in low]
-    summary = " ".join(sections.get("summary", [])[:6])[:900]
+
+    # Competências: só considera termos inteiros/frases, evitando falsos positivos
+    # como a linguagem R aparecer dentro de qualquer palavra.
+    skills = []
+    for skill in KNOWN_SKILLS:
+        if contains_term(text, skill):
+            skills.append({"name": skill, "level": 40})
+    skills = clean_resume_items(skills, ["name"])
+
+    # Formação: prioriza a seção correta. Cursos/certificações ficam separados.
+    education_lines = sections.get("education", [])
+    education = parse_education(education_lines) if education_lines else []
+    education = clean_resume_items(education, ["course", "institution"])
+
+    courses = parse_courses(sections.get("courses", [])) if sections.get("courses") else []
+
+    # Experiência: evita interpretar objetivo profissional como experiência.
+    experience_lines = sections.get("experience", [])
+    experience = parse_experience(experience_lines) if experience_lines else []
+    experience = clean_resume_items(experience, ["role", "company", "period"])
+
+    # Fallback conservador apenas quando não existem títulos de seção úteis.
+    if not education and "education" not in seen_sections:
+        likely_education = [
+            x for x in lines
+            if any(word in fold(x) for word in (
+                "universidade", "faculdade", "tecnico", "tecnica", "bacharel",
+                "licenciatura", "tecnologo", "graduacao", "pos-graduacao", "mba"
+            ))
+        ]
+        education = clean_resume_items(parse_education(likely_education), ["course", "institution"])
+
+    summary = " ".join(sections.get("summary", [])[:7])[:900]
     if not summary:
-        summary = " ".join(sections.get("header", [])[1:6])[:650]
-    education = parse_education(sections.get("education", []))
-    experience = parse_experience(sections.get("experience", []))
-    if not education:
-        education = parse_education(lines)
-    if not experience:
-        experience = parse_experience(lines)
+        header_clean = []
+        for line in sections.get("header", []):
+            low = fold(line)
+            if "@" in line or "linkedin" in low or "github" in low or re.search(r"\b\d{8,}\b", re.sub(r"\D", "", line)):
+                continue
+            header_clean.append(line)
+        summary = " ".join(header_clean[1:5])[:650]
+
+    low = fold(text)
     area = ""
-    if any(x in low for x in ("ciencia de dados","data science","analise de dados","data analytics","machine learning","power bi")):
+    if any(x in low for x in ("ciencia de dados", "data science", "analise de dados", "data analytics", "machine learning", "power bi")):
         area = "Ciência de Dados"
-    role = experience[0].get("role","") if experience else ""
+
     return {
-        "profile": {"name": guess_name(lines), "about": summary, "area": area, "role": role},
+        "profile": {
+            "name": guess_name(lines),
+            "about": summary,
+            "area": area,
+            "role": ""
+        },
         "education": education,
         "experience": experience,
-        "skills": unique(skills, lambda x: x.get("name","")),
-        "courses": []
+        "skills": skills,
+        "courses": courses
     }
 
 LEARNING_CATALOG = [
