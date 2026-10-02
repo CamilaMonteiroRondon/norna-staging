@@ -1,3 +1,4 @@
+# remote brazil source check
 # brazil source test
 # brazil no-gupy check
 # final rerun
@@ -72,7 +73,7 @@ jobs:
 
           await page.click('[data-page="vagas"]');
           await page.selectOption('#jobMarket','Brasil');
-          await page.selectOption('#jobMode','Indiferente');
+          await page.selectOption('#jobMode','Remoto');
           await page.fill('#jobKeyword','dados');
           await page.click('#findJobs');
           await page.waitForFunction(()=>!document.querySelector('#jobSearchNote')?.textContent.includes('Buscando'),{timeout:60000});
