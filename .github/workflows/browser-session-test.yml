@@ -90,10 +90,53 @@ jobs:
           await page.waitForSelector('#page-ia.active');
           if(await page.locator('.page.active').count()!==1) throw new Error('Mais de uma tela ficou ativa');
 
+          await page.click('[data-page="dashboard"]');
+          await page.waitForSelector('#page-dashboard.active');
+          if(await page.locator('#dashAvatar').count()) throw new Error('Foto ainda aparece no Dashboard');
+          const greeting=await page.textContent('#dashHello');
+          if(!greeting?.trim()) throw new Error('Saudação do Dashboard não apareceu');
+
           await page.click('[data-page="curriculo"]');
           await page.waitForSelector('#page-curriculo.active');
           const resumeButtons=await page.locator('#page-curriculo input[type="file"]').count();
           if(resumeButtons!==1) throw new Error('Tela de currículo não foi simplificada');
+
+          await page.setInputFiles('#resumeFile',{
+            name:'curriculo-norna.txt',
+            mimeType:'text/plain',
+            buffer:Buffer.from(`Camila Monteiro
+Ciência de Dados Júnior
+
+RESUMO PROFISSIONAL
+Profissional em transição para Ciência de Dados.
+
+COMPETÊNCIAS TÉCNICAS
+Python
+SQL
+MySQL
+Pandas
+
+CURSOS E CERTIFICAÇÕES
+Oracle Next Education — Alura
+Formação em Ciência de Dados — Alura
+
+FORMAÇÃO ACADÊMICA
+Ciências Biológicas — Universidade Iguaçu — 2015
+`)
+          });
+          await page.waitForFunction(()=>document.querySelector('#resumeImportStatus')?.textContent.includes('Currículo lido'));
+          await page.waitForTimeout(1000);
+
+          await page.click('[data-page="competencias"]');
+          await page.waitForSelector('#page-competencias.active');
+          const pythonCard=page.locator('.skill-item').filter({hasText:'Python'}).first();
+          if(await pythonCard.count()!==1) throw new Error('Python não foi importado para Competências');
+          if(!(await pythonCard.textContent()).includes('85%')) throw new Error('Competência do currículo não entrou como forte');
+
+          await page.click('[data-page="cursos"]');
+          await page.waitForSelector('#page-cursos.active');
+          const courseText=await page.textContent('#courseList');
+          if(!courseText.includes('Oracle Next Education')) throw new Error('Curso do currículo não foi importado');
 
           const footer=await page.textContent('.app-footer');
           if(!footer.includes('Camila Monteiro') || !footer.includes('2026')) throw new Error('Rodapé não apareceu');
