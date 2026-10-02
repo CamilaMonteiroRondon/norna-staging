@@ -327,7 +327,7 @@ def search_terms(value):
 
 def fetch_json(url):
     req = Request(url, headers={"User-Agent":"NORNA-Portfolio/1.1","Accept":"application/json"})
-    with urlopen(req, timeout=18) as response:
+    with urlopen(req, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
 
 def serper_search(query, num=10):
