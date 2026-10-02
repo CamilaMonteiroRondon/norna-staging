@@ -1127,7 +1127,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
     if wants_brazil and not any(src in sources for src in ("Vagas.com.br", "Jobicy Brasil", "Jooble Brasil", "Web Brasil")):
         note += " As fontes brasileiras não responderam agora. Tente novamente em alguns instantes."
     elif wants_brazil:
-        note += " A busca brasileira não usa Gupy."
+        note += " A busca brasileira combina fontes nacionais e remotas quando disponíveis."
 
     return {"jobs": result, "sources": sources, "market": market, "brazil_count": brazil_count, "international_count": intl_count, "note": note}
 
