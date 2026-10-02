@@ -4,6 +4,7 @@ import json
 import os
 import re
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
@@ -181,17 +182,23 @@ def clean_resume_items(items, fields):
 
 def parse_courses(lines):
     out = []
+    project_words = (
+        "projeto", "portfolio", "github", "repositorio", "aplicacao desenvolvida",
+        "dashboard desenvolvido", "modelo treinado", "api desenvolvida"
+    )
     for raw in lines or []:
         line = raw.strip(" •|-")
-        if len(line) < 4 or len(line) > 220:
+        if len(line) < 4 or len(line) > 180:
             continue
         low = fold(line)
-        if "http://" in low or "https://" in low or "linkedin" in low or "github" in low:
+        if "http://" in low or "https://" in low or "linkedin" in low or "github.com" in low:
+            continue
+        if any(word in low for word in project_words):
             continue
         parts = [p.strip() for p in re.split(r"\s+[|—–-]\s+", line) if p.strip()]
         name = parts[0] if parts else line
         platform = parts[1] if len(parts) > 1 else ""
-        if fold(name) in ("curso", "cursos", "certificacao", "certificacoes"):
+        if fold(name) in ("curso", "cursos", "certificacao", "certificacoes", "projetos", "projeto"):
             continue
         out.append({"name": name[:180], "platform": platform[:140], "status": "Concluído", "progress": 100})
     return clean_resume_items(out, ["name", "platform"])[:16]
@@ -221,7 +228,7 @@ def analyze_resume(text):
     skills = []
     for skill in KNOWN_SKILLS:
         if contains_term(text, skill):
-            skills.append({"name": skill, "level": 85})
+            skills.append({"name": skill, "level": 100})
     skills = clean_resume_items(skills, ["name"])
 
     # Formação: prioriza a seção correta. Cursos/certificações ficam separados.
@@ -262,12 +269,23 @@ def analyze_resume(text):
     if any(x in low for x in ("ciencia de dados", "data science", "analise de dados", "data analytics", "machine learning", "power bi")):
         area = "Ciência de Dados"
 
+    email_match = re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text or "")
+    phone_match = re.search(r"(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?\d{4,5}[-\s]?\d{4}", text or "")
+    linkedin_match = re.search(r"(?:https?://)?(?:www\.)?linkedin\.com/in/[A-Za-z0-9._%-]+/?", text or "", re.I)
+    github_match = re.search(r"(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9._-]+/?", text or "", re.I)
+
     return {
         "profile": {
             "name": guess_name(lines),
             "about": summary,
             "area": area,
             "role": ""
+        },
+        "contact": {
+            "email": email_match.group(0) if email_match else "",
+            "phone": phone_match.group(0).strip() if phone_match else "",
+            "linkedin": linkedin_match.group(0) if linkedin_match else "",
+            "github": github_match.group(0) if github_match else ""
         },
         "education": education,
         "experience": experience,
@@ -339,6 +357,31 @@ def serper_search(query, num=10):
         data = json.loads(response.read().decode("utf-8"))
 
     return data.get("organic", []) or []
+
+def jooble_search(keywords, location="Brasil", page=1, result_count=20):
+    api_key = os.getenv("JOOBLE_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    payload = json.dumps({
+        "keywords": (keywords or "").strip() or "emprego",
+        "location": (location or "Brasil").strip(),
+        "page": int(page or 1),
+        "ResultOnPage": max(1, min(50, int(result_count or 20)))
+    }).encode("utf-8")
+
+    req = Request(
+        "https://br.jooble.org/api/" + api_key,
+        data=payload,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "NORNA-Portfolio/1.3"
+        }
+    )
+    with urlopen(req, timeout=12) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    return data.get("jobs", []) or []
 
 def source_name(link):
     try:
@@ -445,19 +488,24 @@ def search_learning(kind="", mode="", keyword="", price=""):
 # Estas funções sobrescrevem as versões acima quando o módulo é carregado.
 # Se SERPER_API_KEY não existir, a NORNA continua usando as fontes gratuitas.
 
-def search_jobs(query="", keyword="", role="", area="", location="", mode="", days=7):
+def search_jobs(query="", keyword="", role="", area="", location="", market="Todos", mode="", days=7):
     days = max(1, min(60, int(days or 7)))
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     terms = search_terms(" ".join([keyword, role, area, query]))
-    jobs, sources = [], []
+    market = market if market in ("Brasil", "Internacional", "Todos") else "Todos"
+    wants_brazil = market in ("Brasil", "Todos")
+    wants_international = market in ("Internacional", "Todos")
+    base = " ".join([role, area, keyword, query]).strip() or "emprego"
+    brazil_location = (location or "Brasil").strip()
 
-    try:
+    def remotive_provider():
+        rows = []
         payload = fetch_json("https://remotive.com/api/remote-jobs")
         for item in payload.get("jobs", []):
             pub = parse_dt(item.get("publication_date"))
             if pub and pub < cutoff:
                 continue
-            jobs.append({
+            rows.append({
                 "id": "remotive-" + str(item.get("id", "")),
                 "title": item.get("title", ""),
                 "company": item.get("company_name", ""),
@@ -468,71 +516,107 @@ def search_jobs(query="", keyword="", role="", area="", location="", mode="", da
                 "url": item.get("url", ""),
                 "remote": True,
                 "source": "Remotive",
+                "market": "Internacional",
                 "tags": [item.get("category", "")]
             })
-        sources.append("Remotive")
-    except Exception:
-        pass
+        return "Remotive", rows
 
-    try:
-        for page in range(1, 4):
-            payload = fetch_json("https://www.arbeitnow.com/api/job-board-api?page=" + str(page))
-            rows = payload.get("data", [])
-            if not rows:
-                break
-            for item in rows:
-                created = item.get("created_at")
-                pub = datetime.fromtimestamp(created, timezone.utc) if isinstance(created, (int, float)) else parse_dt(created)
-                if pub and pub < cutoff:
-                    continue
-                jobs.append({
-                    "id": "arbeitnow-" + str(item.get("slug", "")),
-                    "title": item.get("title", ""),
-                    "company": item.get("company_name", ""),
-                    "location": item.get("location", ""),
-                    "category": ", ".join(item.get("tags", [])[:3]),
-                    "description": strip_html(item.get("description", ""))[:6000],
-                    "publication_date": pub.isoformat() if pub else "",
-                    "url": item.get("url", ""),
-                    "remote": bool(item.get("remote")),
-                    "source": "Arbeitnow",
-                    "tags": item.get("tags", []) + item.get("job_types", [])
-                })
-        sources.append("Arbeitnow")
-    except Exception:
-        pass
+    def arbeitnow_provider():
+        rows = []
+        payload = fetch_json("https://www.arbeitnow.com/api/job-board-api?page=1")
+        for item in payload.get("data", []) or []:
+            created = item.get("created_at")
+            pub = datetime.fromtimestamp(created, timezone.utc) if isinstance(created, (int, float)) else parse_dt(created)
+            if pub and pub < cutoff:
+                continue
+            rows.append({
+                "id": "arbeitnow-" + str(item.get("slug", "")),
+                "title": item.get("title", ""),
+                "company": item.get("company_name", ""),
+                "location": item.get("location", ""),
+                "category": ", ".join(item.get("tags", [])[:3]),
+                "description": strip_html(item.get("description", ""))[:6000],
+                "publication_date": pub.isoformat() if pub else "",
+                "url": item.get("url", ""),
+                "remote": bool(item.get("remote")),
+                "source": "Arbeitnow",
+                "market": "Internacional",
+                "tags": item.get("tags", []) + item.get("job_types", [])
+            })
+        return "Arbeitnow", rows
 
-    live_web = False
-    if os.getenv("SERPER_API_KEY", "").strip():
-        try:
-            base = " ".join([role, area, keyword, query]).strip() or "emprego"
-            place = location.strip() or "Brasil"
-            mode_text = {"Remoto": "remoto", "Presencial": "presencial", "Híbrido": "híbrido"}.get(mode, "")
-            web_query = " ".join(["vaga recente", base, mode_text, place, "emprego"]).strip()
-            for item in serper_search(web_query, 15):
-                title = (item.get("title") or "").strip()
-                link = (item.get("link") or "").strip()
-                snippet = (item.get("snippet") or "").strip()
-                if not title or not link:
-                    continue
-                txt = fold(title + " " + snippet)
-                jobs.append({
-                    "id": "web-" + str(abs(hash(link))),
-                    "title": title,
-                    "company": "",
-                    "location": place,
-                    "category": "Resultado web ao vivo",
-                    "description": snippet,
-                    "publication_date": item.get("date", ""),
-                    "url": link,
-                    "remote": ("remot" in txt) or mode == "Remoto",
-                    "source": source_name(link),
-                    "tags": ["web"]
-                })
-            sources.append("Web ao vivo")
-            live_web = True
-        except Exception:
-            pass
+    def jooble_provider():
+        rows = []
+        for item in jooble_search(base, brazil_location, 1, 25):
+            title = (item.get("title") or "").strip()
+            link = (item.get("link") or "").strip()
+            snippet = strip_html(item.get("snippet") or item.get("description") or "")
+            loc = item.get("location") or brazil_location
+            txt = fold(" ".join([title, snippet, str(loc), item.get("type") or ""]))
+            rows.append({
+                "id": "jooble-" + str(abs(hash(link or (title + str(loc))))),
+                "title": title,
+                "company": item.get("company") or "",
+                "location": loc,
+                "category": item.get("type") or "Vaga no Brasil",
+                "description": snippet[:6000],
+                "publication_date": item.get("updated") or "",
+                "url": link,
+                "remote": "remot" in txt,
+                "source": "Jooble Brasil",
+                "market": "Brasil",
+                "tags": ["Brasil", item.get("type") or ""]
+            })
+        return "Jooble Brasil", rows
+
+    def brazil_web_provider():
+        mode_text = {"Remoto": "remoto", "Presencial": "presencial", "Híbrido": "híbrido"}.get(mode, "")
+        web_query = " ".join(["vaga", base, mode_text, brazil_location, "Brasil emprego"]).strip()
+        rows = []
+        for item in serper_search(web_query, 15):
+            title = (item.get("title") or "").strip()
+            link = (item.get("link") or "").strip()
+            snippet = (item.get("snippet") or "").strip()
+            if not title or not link:
+                continue
+            txt = fold(title + " " + snippet)
+            rows.append({
+                "id": "web-br-" + str(abs(hash(link))),
+                "title": title,
+                "company": "",
+                "location": brazil_location,
+                "category": "Resultado web no Brasil",
+                "description": snippet,
+                "publication_date": item.get("date", ""),
+                "url": link,
+                "remote": "remot" in txt or mode == "Remoto",
+                "source": source_name(link),
+                "market": "Brasil",
+                "tags": ["Brasil", "web"]
+            })
+        return "Web Brasil", rows
+
+    providers = []
+    if wants_brazil:
+        if os.getenv("JOOBLE_API_KEY", "").strip():
+            providers.append(jooble_provider)
+        if os.getenv("SERPER_API_KEY", "").strip():
+            providers.append(brazil_web_provider)
+    if wants_international:
+        providers.extend([remotive_provider, arbeitnow_provider])
+
+    jobs, sources = [], []
+    if providers:
+        with ThreadPoolExecutor(max_workers=min(4, len(providers))) as pool:
+            futures = [pool.submit(fn) for fn in providers]
+            for future in as_completed(futures):
+                try:
+                    source, rows = future.result()
+                    if rows:
+                        jobs.extend(rows)
+                        sources.append(source)
+                except Exception:
+                    pass
 
     dedup = {}
     for job in jobs:
@@ -552,11 +636,26 @@ def search_jobs(query="", keyword="", role="", area="", location="", mode="", da
     if terms:
         ranked = [(score, j) for score, j in ranked if score > 0]
     ranked.sort(key=lambda pair: pair[0], reverse=True)
-    result = [j for _, j in ranked[:100]]
-    note = str(len(result)) + " vaga(s) encontrada(s). Fontes: " + (" + ".join(sources) if sources else "nenhuma") + "."
-    if not live_web:
-        note += " Para ampliar para a internet em tempo real, configure SERPER_API_KEY no Render."
-    return {"jobs": result, "sources": sources, "live_web": live_web, "note": note}
+    result = [j for _, j in ranked[:80]]
+
+    brazil_count = sum(1 for j in result if j.get("market") == "Brasil")
+    intl_count = sum(1 for j in result if j.get("market") == "Internacional")
+    note = str(len(result)) + " vaga(s) encontrada(s)"
+    if market == "Todos":
+        note += " — " + str(brazil_count) + " Brasil e " + str(intl_count) + " internacional(is)"
+    elif market == "Brasil":
+        note += " no Brasil"
+    else:
+        note += " no mercado internacional"
+    if sources:
+        note += ". Fontes: " + " + ".join(sources) + "."
+    else:
+        note += "."
+
+    if wants_brazil and not any(src in sources for src in ("Jooble Brasil", "Web Brasil")):
+        note += " A fonte brasileira ao vivo ainda precisa de JOOBLE_API_KEY ou SERPER_API_KEY no Render."
+
+    return {"jobs": result, "sources": sources, "market": market, "brazil_count": brazil_count, "international_count": intl_count, "note": note}
 
 def search_learning(kind="", mode="", keyword="", price=""):
     terms = search_terms(keyword)
