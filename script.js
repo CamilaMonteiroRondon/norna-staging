@@ -781,15 +781,18 @@ async function openLearningDetails(x){
     if(!r.ok)throw new Error(j.error||"Não foi possível consultar detalhes.");
 
     const priceText=j.price?.label||"Faixa de preço não encontrada nas fontes consultadas.";
-    const ratingText=j.rating?.label||"Avaliação pública confiável não encontrada.";
-    const quality=j.rating?.quality||"";
-    const sources=(j.sources||[]).slice(0,4).map(src=>`<a href="${esc(normalUrl(src.link||""))}" target="_blank" rel="noopener noreferrer">${esc(src.name||"Fonte")}</a>`).join("");
+    const courseRating=j.course_rating?.label||"Avaliação específica do curso não encontrada.";
+    const courseQuality=j.course_rating?.quality||"";
+    const institutionRating=j.institution_rating?.label||"Avaliação da instituição não encontrada.";
+    const institutionQuality=j.institution_rating?.quality||"";
+    const sources=(j.sources||[]).slice(0,5).map(src=>`<a href="${esc(normalUrl(src.link||""))}" target="_blank" rel="noopener noreferrer">${esc(src.name||"Fonte")}</a>`).join("");
 
     loading.innerHTML=`
       <h3>Preço e avaliação</h3>
       <div class="learning-detail-facts">
         <div><span>Preço / mensalidade</span><strong>${esc(priceText)}</strong></div>
-        <div><span>Avaliação encontrada</span><strong>${esc(ratingText)}</strong>${quality?`<small>${esc(quality)}</small>`:""}</div>
+        <div><span>Avaliação do curso</span><strong>${esc(courseRating)}</strong>${courseQuality?`<small>${esc(courseQuality)}</small>`:""}</div>
+        <div><span>Avaliação da instituição</span><strong>${esc(institutionRating)}</strong>${institutionQuality?`<small>${esc(institutionQuality)}</small>`:""}</div>
       </div>
       ${j.note?`<p class="detail-note">${esc(j.note)}</p>`:""}
       ${sources?`<p class="detail-sources">Fontes consultadas: ${sources}</p>`:""}
