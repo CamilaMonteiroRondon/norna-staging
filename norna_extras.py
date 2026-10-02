@@ -1000,11 +1000,31 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
     jobs = list(dedup.values())
 
     if mode == "Remoto":
-        jobs = [j for j in jobs if j.get("remote") is True or "remote" in fold(j.get("location", "") + " " + j.get("description", ""))]
+        jobs = [
+            j for j in jobs
+            if j.get("workplace_type") == "remote"
+            or j.get("remote") is True
+            or "remote" in fold(j.get("location", "") + " " + j.get("category", "") + " " + j.get("description", ""))
+            or "remot" in fold(j.get("location", "") + " " + j.get("category", "") + " " + j.get("description", ""))
+        ]
     elif mode == "Presencial":
-        jobs = [j for j in jobs if j.get("remote") is False]
+        jobs = [
+            j for j in jobs
+            if j.get("workplace_type") == "on-site"
+            or (
+                not j.get("workplace_type")
+                and j.get("remote") is False
+                and "hybrid" not in fold(j.get("category", "") + " " + j.get("description", ""))
+                and "hibrid" not in fold(j.get("category", "") + " " + j.get("description", ""))
+            )
+        ]
     elif mode == "Híbrido":
-        jobs = [j for j in jobs if "hybrid" in fold(j.get("description", "")) or "hibrid" in fold(j.get("description", ""))]
+        jobs = [
+            j for j in jobs
+            if j.get("workplace_type") == "hybrid"
+            or "hybrid" in fold(j.get("location", "") + " " + j.get("category", "") + " " + j.get("description", ""))
+            or "hibrid" in fold(j.get("location", "") + " " + j.get("category", "") + " " + j.get("description", ""))
+        ]
 
     ranked = [(relevance(j, terms) + (2 if market == "Todos" and j.get("market") == "Brasil" else 0), j) for j in jobs]
     if terms:
