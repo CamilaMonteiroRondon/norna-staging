@@ -35,6 +35,7 @@ Bibliotecas e integrações:
 - Mammoth.js
 - Remotive API
 - Arbeitnow API
+- Jooble Brasil API opcional para vagas brasileiras
 - Serper API opcional para busca web em tempo real
 - OpenAI API opcional para a área NORNA IA
 
@@ -66,11 +67,12 @@ COOKIE_SECURE=1
 DEV_MODE=1
 APP_BASE_URL=https://norna-staging.onrender.com
 SERPER_API_KEY=
+JOOBLE_API_KEY=
 OPENAI_API_KEY=
 OPENAI_MODEL=
 ```
 
-`SERPER_API_KEY` é usada para pesquisa web em tempo real.
+`SERPER_API_KEY` é usada para pesquisa web em tempo real.\n\n`JOOBLE_API_KEY` ativa uma fonte específica de vagas brasileiras.
 
 `OPENAI_API_KEY` é opcional e ativa a área de IA da NORNA.
 
