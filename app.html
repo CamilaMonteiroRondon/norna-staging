@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261002a">
+  <link rel="stylesheet" href="style.css?v=20261002b">
 </head>
 <body>
 <div class="app">
@@ -50,13 +50,10 @@
     </header>
 
     <section id="page-dashboard" class="page active">
-      <div class="dashboard-header-card">
-        <img id="dashAvatar" class="avatar dashboard-avatar" alt="">
-        <div>
-          <span class="label">DASHBOARD</span>
-          <h2 id="dashHello">Olá.</h2>
-          <p class="muted">Acompanhe seu perfil e seu próximo passo na NORNA.</p>
-        </div>
+      <div class="dashboard-greeting">
+        <span class="label">DASHBOARD</span>
+        <h2 id="dashHello">Olá de novo.</h2>
+        <p id="dashGreetingText" class="muted">Vamos continuar de onde você parou?</p>
       </div>
 
       <div class="stats dashboard-stats">
@@ -124,11 +121,11 @@
     </section>
 
     <section id="page-competencias" class="page">
-      <div class="intro with-action"><div><h2>Competências</h2><p>A NORNA só usa o que você cadastrar. Nada vem preenchido.</p></div><button id="addSkill" class="primary">+ Adicionar competência</button></div>
+      <div class="intro with-action"><div><h2>Competências</h2><p>As competências identificadas no seu currículo entram automaticamente como fortes. Você também pode adicionar ou ajustar qualquer uma.</p></div><button id="addSkill" class="primary">+ Adicionar competência</button></div>
       <div class="cards3">
-        <article class="card"><h3>Fortes</h3><div id="strongSkills" class="stack"></div><div id="strongEmpty" class="empty-text">Nenhuma ainda.</div></article>
-        <article class="card"><h3>Em desenvolvimento</h3><div id="developingSkills" class="stack"></div><div id="developingEmpty" class="empty-text">Nenhuma ainda.</div></article>
-        <article class="card"><h3>Próximas</h3><div id="nextSkills" class="stack"></div><div id="nextEmpty" class="empty-text">Nenhuma ainda.</div></article>
+        <article class="card"><h3>Fortes</h3><div id="strongSkills" class="skill-grid"></div><div id="strongEmpty" class="empty-text">Nenhuma ainda.</div></article>
+        <article class="card"><h3>Em desenvolvimento</h3><div id="developingSkills" class="skill-grid"></div><div id="developingEmpty" class="empty-text">Nenhuma ainda.</div></article>
+        <article class="card"><h3>Próximas</h3><div id="nextSkills" class="skill-grid"></div><div id="nextEmpty" class="empty-text">Nenhuma ainda.</div></article>
       </div>
     </section>
 
@@ -249,7 +246,7 @@
 <div id="toast" class="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<script src="script.js?v=20261002a"></script>
+<script src="script.js?v=20261002b"></script>
 <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
