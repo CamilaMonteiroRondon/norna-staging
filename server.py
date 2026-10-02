@@ -5,7 +5,7 @@ from urllib.request import urlopen, Request
 from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
 import base64, hashlib, hmac, html, json, os, re, secrets, smtplib, sqlite3, io
-from norna_extras import analyze_resume, search_jobs, search_learning
+from norna_extras import analyze_resume, search_jobs, search_learning, learning_details
 
 BASE = Path(__file__).resolve().parent
 DB = Path(os.getenv('NORNA_DB_PATH', str(BASE / 'norna.db')))
@@ -325,6 +325,16 @@ class Handler(SimpleHTTPRequestHandler):
             mode = (qs.get('mode', [''])[0] or '').strip()
             days = max(1, min(60, int(qs.get('days', ['7'])[0] or 7)))
             result = search_jobs(query=query, keyword=keyword, role=role, area=area, location=location, market=market, mode=mode, days=days)
+            return self.send_json(result)
+
+        if path == '/api/learning/details':
+            user = self.require_user()
+            if not user:
+                return
+            program = (qs.get('program', [''])[0] or '').strip()
+            institution = (qs.get('institution', [''])[0] or '').strip()
+            link = (qs.get('link', [''])[0] or '').strip()
+            result = learning_details(program=program, institution=institution, link=link)
             return self.send_json(result)
 
         if path == '/api/learning':
