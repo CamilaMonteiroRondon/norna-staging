@@ -1,15 +1,15 @@
 const KEY="norna_v6_data", THEME="norna_v6_theme";
 const IS_NATIVE_APP=/NORNA-Android/i.test(navigator.userAgent);
 const emptyData=()=>({
-  profile:{photo:"",name:"",age:"",area:"",role:"",level:"",mode:"",location:"",study:"",opportunity:"",about:""},
+  profile:{photo:"",name:"",age:"",birthDate:"",area:"",role:"",level:"",mode:"",location:"",study:"",opportunity:"",about:""},
   education:[],experience:[],journey:[],courses:[],skills:[],savedJobs:[],savedLearning:[],
-  resumeText:"",resumeFileName:""
+  resumeText:"",resumeFileName:"",resumeContact:{email:"",phone:"",linkedin:"",github:""},resumeSyncVersion:0
 });
 let data=load(), currentCourseFilter="Todos", currentJobTab="recommended", currentLearningTab="recommended", recommendedJobs=[], recommendedLearning=[], modalHandler=null, currentUser=null, syncTimer=null;
 document.body.classList.toggle("native-app",IS_NATIVE_APP);
 
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):emptyData()}catch{return emptyData()}}
-function normalizeData(source){const base=emptyData();source=source||{};return {...base,...source,profile:{...base.profile,...(source.profile||{})},education:Array.isArray(source.education)?source.education:[],experience:Array.isArray(source.experience)?source.experience:[],journey:Array.isArray(source.journey)?source.journey:[],courses:Array.isArray(source.courses)?source.courses:[],skills:Array.isArray(source.skills)?source.skills:[],savedJobs:Array.isArray(source.savedJobs)?source.savedJobs:[],savedLearning:Array.isArray(source.savedLearning)?source.savedLearning:[],resumeText:String(source.resumeText||""),resumeFileName:String(source.resumeFileName||"")}}
+function normalizeData(source){const base=emptyData();source=source||{};return {...base,...source,profile:{...base.profile,...(source.profile||{})},education:Array.isArray(source.education)?source.education:[],experience:Array.isArray(source.experience)?source.experience:[],journey:Array.isArray(source.journey)?source.journey:[],courses:Array.isArray(source.courses)?source.courses:[],skills:Array.isArray(source.skills)?source.skills:[],savedJobs:Array.isArray(source.savedJobs)?source.savedJobs:[],savedLearning:Array.isArray(source.savedLearning)?source.savedLearning:[],resumeText:String(source.resumeText||""),resumeFileName:String(source.resumeFileName||""),resumeContact:{...base.resumeContact,...(source.resumeContact||{})},resumeSyncVersion:Number(source.resumeSyncVersion||0)}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));clearTimeout(syncTimer);syncTimer=setTimeout(syncData,220)}
 async function syncData(){
   try{
@@ -34,10 +34,10 @@ async function bootstrap(){
 
     // Atualiza uma única vez currículos importados antes da sincronização
     // de competências fortes e cursos automáticos.
-    if(data.resumeText&&Number(data.resumeSyncVersion||0)<2){
+    if(data.resumeText&&Number(data.resumeSyncVersion||0)<3){
       try{
         await analyzeResumeText(data.resumeText,null);
-        data.resumeSyncVersion=2;
+        data.resumeSyncVersion=3;
         await syncData();
       }catch(err){
         console.warn("Não foi possível atualizar automaticamente o currículo antigo.",err);
@@ -136,22 +136,62 @@ document.getElementById("modalCancel").onclick=closeModal;
 document.getElementById("modalSave").onclick=()=>modalHandler&&modalHandler();
 modal.onclick=e=>{if(e.target===modal)closeModal()};
 
-// PERFIL
-const pf={name:"profileName",age:"profileAge",area:"profileArea",role:"profileRole",level:"profileLevel",mode:"profileMode",location:"profileLocation",study:"profileStudy",opportunity:"profileOpportunity",about:"profileAbout"};
-document.getElementById("saveProfile").onclick=()=>{Object.entries(pf).forEach(([k,id])=>data.profile[k]=val(id));save();renderAll();toast("Perfil salvo.")};
-let profileAutosaveTimer=null;
+const detailModal=document.getElementById("detailModal");
+function closeDetailModal(){
+  if(!detailModal)return;
+  detailModal.classList.remove("open");
+}
+function openDetailModal(title,body,link="",linkLabel="Abrir site oficial"){
+  if(!detailModal)return;
+  document.getElementById("detailModalBody").innerHTML=`<span class="label">DETALHES</span><h2>${esc(title)}</h2>${body}`;
+  const a=document.getElementById("detailModalLink");
+  a.textContent=linkLabel;
+  if(link){a.href=normalUrl(link);a.classList.remove("hidden")}else{a.removeAttribute("href");a.classList.add("hidden")}
+  detailModal.classList.add("open");
+}
+document.getElementById("detailModalClose").onclick=closeDetailModal;
+document.getElementById("detailModalDismiss").onclick=closeDetailModal;
+detailModal.onclick=e=>{if(e.target===detailModal)closeDetailModal()};
 
+
+// PERFIL
+const pf={name:"profileName",birthDate:"profileBirthDate",area:"profileArea",role:"profileRole",level:"profileLevel",mode:"profileMode",location:"profileLocation",study:"profileStudy",opportunity:"profileOpportunity",about:"profileAbout"};
+
+function calculateAge(dateValue){
+  if(!dateValue)return Number(data.profile.age)||null;
+  const birth=new Date(dateValue+"T12:00:00");
+  if(Number.isNaN(birth.getTime()))return Number(data.profile.age)||null;
+  const today=new Date();
+  let age=today.getFullYear()-birth.getFullYear();
+  const beforeBirthday=(today.getMonth()<birth.getMonth())||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate());
+  if(beforeBirthday)age--;
+  return age>=0&&age<120?age:null;
+}
+function formatDateBR(dateValue){
+  if(!dateValue)return "";
+  const parts=String(dateValue).split("-");
+  return parts.length===3?`${parts[2]}/${parts[1]}/${parts[0]}`:dateValue;
+}
 function profileHeadline(){
   const p=data.profile;
   if(p.role)return p.role;
   return [p.area,p.level].filter(Boolean).join(" ")||"Perfil profissional";
 }
-
+function showProfileEditor(show){
+  const view=document.getElementById("profileView");
+  const edit=document.getElementById("profileEdit");
+  const button=document.getElementById("editProfileButton");
+  if(view)view.classList.toggle("hidden",show);
+  if(edit)edit.classList.toggle("hidden",!show);
+  if(button)button.classList.toggle("hidden",show);
+  if(show)renderProfile();
+}
 function updateProfileHeader(){
   const p=data.profile;
+  const ageValue=calculateAge(p.birthDate);
   document.getElementById("topName").textContent=p.name||"Seu perfil";
   const age=document.getElementById("topAge");
-  if(age)age.textContent=p.age?`${p.age} anos`:"";
+  if(age)age.textContent=ageValue!==null?`${ageValue} anos`:"";
   const meta=document.getElementById("topProfileMeta");
   if(meta)meta.textContent=profileHeadline();
 
@@ -171,41 +211,58 @@ function updateProfileHeader(){
     greetingText.textContent=greetings[index][1];
   }
 }
-
-Object.entries(pf).forEach(([k,id])=>{
-  const el=document.getElementById(id);
-  if(!el)return;
-
-  const update=()=>{
-    // Mantém exatamente o que a pessoa está digitando.
-    // Não redesenha o formulário a cada tecla, então espaços não somem.
-    data.profile[k]=el.value;
-    localStorage.setItem(KEY,JSON.stringify(data));
-    updateProfileHeader();
-
-    clearTimeout(profileAutosaveTimer);
-    profileAutosaveTimer=setTimeout(()=>syncData(),700);
-  };
-
-  el.addEventListener(el.tagName==="SELECT"?"change":"input",update);
-});
-document.getElementById("profilePhoto").onchange=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>1500000)return alert("Escolha uma imagem de até 1,5 MB.");const r=new FileReader();r.onload=()=>{data.profile.photo=r.result;save();renderAll();toast("Foto adicionada.")};r.readAsDataURL(f)};
-document.getElementById("removePhoto").onclick=()=>{data.profile.photo="";save();renderAll()};
-function placeholder(){return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" rx="34" fill="#c6b8af"/><circle cx="80" cy="61" r="28" fill="#9d6b66"/><path d="M35 143c4-31 22-46 45-46s41 15 45 46" fill="#9d6b66"/></svg>`)}
 function renderProfile(){
+  const p=data.profile;
   Object.entries(pf).forEach(([k,id])=>{
     const el=document.getElementById(id);
-    if(el)el.value=data.profile[k]||"";
+    if(el)el.value=p[k]||"";
   });
-  const p=data.profile.photo||placeholder();
-  const profileAvatar=document.getElementById("profileAvatar");
-  const topAvatar=document.getElementById("topAvatar");
-  if(profileAvatar)profileAvatar.src=p;
-  if(topAvatar)topAvatar.src=p;
+
+  const avatar=p.photo||placeholder();
+  ["profileAvatar","profileViewAvatar","topAvatar"].forEach(id=>{const el=document.getElementById(id);if(el)el.src=avatar});
+
+  const ageValue=calculateAge(p.birthDate);
+  const birthText=p.birthDate?formatDateBR(p.birthDate)+(ageValue!==null?` • ${ageValue} anos`:""):(ageValue!==null?`${ageValue} anos • adicione sua data de nascimento`:"Não informada");
+
+  const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  setText("profileViewName",p.name||"Seu nome");
+  setText("profileViewHeadline",profileHeadline());
+  setText("profileViewMeta",[p.area,p.level].filter(Boolean).join(" • ")||"Complete seu objetivo profissional");
+  setText("profileViewBirth",birthText);
+  setText("profileViewMode",p.mode||"Não informada");
+  setText("profileViewLocation",p.location||"Não informada");
+  setText("profileViewOpportunity",p.opportunity||"Não informada");
+  setText("profileViewStudy",p.study||"Não informada");
+  setText("profileViewAbout",p.about||"Adicione um resumo profissional ao editar seu perfil.");
+
   updateProfileHeader();
 }
+
+document.getElementById("saveProfile").onclick=()=>{
+  Object.entries(pf).forEach(([k,id])=>data.profile[k]=val(id));
+  const ageValue=calculateAge(data.profile.birthDate);
+  if(ageValue!==null)data.profile.age=ageValue;
+  save();
+  renderAll();
+  showProfileEditor(false);
+  toast("Perfil salvo.");
+};
+document.getElementById("editProfileButton").onclick=()=>showProfileEditor(true);
+document.getElementById("cancelProfileEdit").onclick=()=>{renderProfile();showProfileEditor(false)};
+
+document.getElementById("profilePhoto").onchange=e=>{
+  const f=e.target.files?.[0];
+  if(!f)return;
+  if(f.size>1500000)return alert("Escolha uma imagem de até 1,5 MB.");
+  const r=new FileReader();
+  r.onload=()=>{data.profile.photo=r.result;save();renderAll();toast("Foto adicionada.")};
+  r.readAsDataURL(f);
+};
+document.getElementById("removePhoto").onclick=()=>{data.profile.photo="";save();renderAll()};
+function placeholder(){return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" rx="34" fill="#c6b8af"/><circle cx="80" cy="61" r="28" fill="#9d6b66"/><path d="M35 143c4-31 22-46 45-46s41 15 45 46" fill="#9d6b66"/></svg>`)}
+
 const topProfileChip=document.getElementById("topProfileChip");
-if(topProfileChip)topProfileChip.onclick=()=>go("perfil");
+if(topProfileChip)topProfileChip.onclick=()=>{go("perfil");showProfileEditor(false)};
 
 // JORNADA
 document.getElementById("addJourney").onclick=()=>journeyModal();
@@ -274,11 +331,12 @@ function replaceResumeAnalysis(x){
 
   data.education=dedupeBy(x.education||[],item=>`${item.course||""}|${item.institution||""}`);
   data.experience=dedupeBy(x.experience||[],item=>`${item.role||""}|${item.company||""}|${item.period||""}`);
+  data.resumeContact={...data.resumeContact,...(x.contact||{})};
 
   // Tudo que a NORNA identifica como competência no currículo é tratado como forte.
   const resumeSkills=(x.skills||[])
     .filter(item=>item?.name)
-    .map(item=>({name:item.name,level:85,source:"resume"}));
+    .map(item=>({name:item.name,level:100,source:"resume"}));
   const manualSkills=(data.skills||[]).filter(item=>item?.source!=="resume");
   data.skills=dedupeBy([...resumeSkills,...manualSkills],item=>item.name);
 
@@ -323,22 +381,51 @@ function structuredResumeText(){
   return lines.join("\n").trim();
 }
 
+function resumeSection(title,body){
+  if(!body)return "";
+  return `<section class="resume-section"><h4>${esc(title)}</h4>${body}</section>`;
+}
 function renderResume(){
   const preview=document.getElementById("resumePreview");
   const fileName=document.getElementById("resumeFileName");
   const editButton=document.getElementById("editResume");
   if(!preview)return;
 
-  const text=(data.resumeText||structuredResumeText()).trim();
+  const hasResume=Boolean((data.resumeText||"").trim());
   if(fileName)fileName.textContent=data.resumeFileName||"Nenhum currículo enviado.";
-  if(editButton)editButton.disabled=!text;
+  if(editButton)editButton.disabled=!hasResume;
 
-  if(!text){
+  if(!hasResume){
     preview.innerHTML='<div class="resume-empty"><span>▤</span><h3>Seu currículo aparecerá aqui</h3><p>Envie um arquivo para a NORNA ler e organizar.</p></div>';
     return;
   }
 
-  preview.innerHTML=`<pre class="resume-text-preview">${esc(text)}</pre>`;
+  const p=data.profile;
+  const contact=data.resumeContact||{};
+  const email=contact.email||currentUser?.email||"";
+  const contactBits=[email,contact.phone,p.location,contact.linkedin,contact.github].filter(Boolean);
+
+  const summary=p.about?resumeSection("Resumo profissional",`<p>${esc(p.about)}</p>`):"";
+  const objective=(p.role||p.area)?resumeSection("Objetivo profissional",`<p>${esc([p.role,p.area].filter(Boolean).join(" • "))}</p>`):"";
+  const education=data.education.length?resumeSection("Formação",`<div class="resume-list">${data.education.map(x=>`<div><strong>${esc(x.course||"")}</strong>${x.institution?`<span>${esc(x.institution)}</span>`:""}${x.period?`<small>${esc(x.period)}</small>`:""}</div>`).join("")}</div>`):"";
+  const experience=data.experience.length?resumeSection("Experiência",`<div class="resume-list">${data.experience.map(x=>`<div><strong>${esc(x.role||"")}</strong>${x.company?`<span>${esc(x.company)}</span>`:""}${x.period?`<small>${esc(x.period)}</small>`:""}${x.description?`<p>${esc(x.description)}</p>`:""}</div>`).join("")}</div>`):"";
+  const skills=data.skills.length?resumeSection("Competências técnicas",`<div class="resume-skill-pills">${data.skills.map(x=>`<span>${esc(x.name)}</span>`).join("")}</div>`):"";
+  const courses=data.courses.length?resumeSection("Cursos e certificações",`<div class="resume-list compact">${data.courses.map(x=>`<div><strong>${esc(x.name||"")}</strong>${x.platform?`<span>${esc(x.platform)}</span>`:""}</div>`).join("")}</div>`):"";
+
+  preview.innerHTML=`
+    <article class="resume-paper">
+      <header class="resume-paper-head">
+        <h2>${esc(p.name||"Seu nome")}</h2>
+        <p class="resume-paper-role">${esc(profileHeadline())}</p>
+        ${contactBits.length?`<div class="resume-contact">${contactBits.map(x=>`<span>${esc(x)}</span>`).join("")}</div>`:""}
+      </header>
+      ${objective}
+      ${summary}
+      ${skills}
+      ${education}
+      ${courses}
+      ${experience}
+    </article>`;
 }
 
 async function analyzeResumeText(text,status){
@@ -350,7 +437,7 @@ async function analyzeResumeText(text,status){
   const j=await r.json();
   if(!r.ok)throw new Error(j.error||"Não foi possível analisar o currículo.");
   replaceResumeAnalysis(j.extracted);
-  data.resumeSyncVersion=2;
+  data.resumeSyncVersion=3;
   if(status)status.textContent=`Currículo lido: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) identificadas.`;
   return j;
 }
@@ -450,11 +537,11 @@ if(editResume)editResume.onclick=()=>{
 // VAGAS AO VIVO + COMPATIBILIDADE
 document.getElementById("findJobs").onclick=async()=>{
   if(!data.profile.area&&!data.profile.role&&!data.skills.length&&!val("jobKeyword"))return alert("Preencha seu objetivo profissional, competências ou uma palavra-chave.");
-  const mode=val("jobMode")||data.profile.mode,days=val("jobRecency"),keyword=val("jobKeyword"),min=+val("jobMinMatch");
+  const market=val("jobMarket")||"Todos",mode=val("jobMode")||data.profile.mode,days=val("jobRecency"),keyword=val("jobKeyword"),min=+val("jobMinMatch");
   const query=[data.profile.role,data.profile.area,keyword].filter(Boolean).join(" ");
-  const note=document.getElementById("jobSearchNote");note.textContent="Buscando vagas nas fontes conectadas...";
+  const note=document.getElementById("jobSearchNote");note.textContent=market==="Brasil"?"Buscando vagas brasileiras...":(market==="Internacional"?"Buscando vagas internacionais...":"Buscando vagas no Brasil e no exterior...");
   try{
-    const params=new URLSearchParams({query,keyword,role:data.profile.role||"",area:data.profile.area||"",location:data.profile.location||"",mode:mode||"",days:days||"7"});
+    const params=new URLSearchParams({query,keyword,role:data.profile.role||"",area:data.profile.area||"",location:data.profile.location||"",market,mode:mode||"",days:days||"7"});
     const r=await fetch("/api/jobs?"+params.toString()),j=await r.json();
     if(!r.ok)throw new Error(j.error||"A busca não respondeu.");
     recommendedJobs=(j.jobs||[]).map(x=>({...x,...matchInfo(`${x.title} ${x.description||""} ${x.category||""}`)}));
@@ -463,17 +550,89 @@ document.getElementById("findJobs").onclick=async()=>{
     currentJobTab="recommended";setJobTab();renderJobs();
   }catch(err){recommendedJobs=[];renderJobs();note.textContent="Não foi possível consultar as fontes agora: "+(err.message||"erro temporário")}}
 ;
-function renderJobCard(x,index,saved=false){return `<article class="opp-card"><div><h3>${esc(x.title)}${x.company?" — "+esc(x.company):""}</h3><p>${esc([x.location,x.category,x.publication_date].filter(Boolean).join(" • "))}</p><div class="tags">${(x.matches||[]).map(t=>`<span class="tag">✓ ${esc(t)}</span>`).join("")}${(x.gaps||[]).slice(0,4).map(t=>`<span class="tag gap">revisar: ${esc(t)}</span>`).join("")}</div><div class="opp-actions"><button data-job-open="${saved?"s":"r"}-${index}">Abrir vaga</button>${saved?`<button data-job-del="${index}" class="danger">Excluir</button>`:`<button data-job-save="${index}">Salvar</button>`}</div><p>Fonte: ${esc(x.source||"web")}</p></div><div class="score"><div class="score-circle">${x.score||0}%</div><p>compatibilidade</p></div></article>`}
-function renderJobs(){document.getElementById("recommendedJobs").innerHTML=recommendedJobs.map((x,i)=>renderJobCard(x,i,false)).join("");const saved=data.savedJobs.map(x=>({...x,...matchInfo(`${x.title} ${x.description||""}`)}));document.getElementById("savedJobs").innerHTML=saved.map((x,i)=>renderJobCard(x,i,true)).join("");const visible=currentJobTab==="recommended"?recommendedJobs:saved;document.getElementById("jobEmpty").classList.toggle("hidden",visible.length>0)}
+function renderJobCard(x,index,saved=false){
+  const source=x.source||"web";
+  return `<article class="opp-card">
+    <div>
+      <h3>${esc(x.title)}${x.company?" — "+esc(x.company):""}</h3>
+      <p>${esc([x.location,x.category,x.publication_date].filter(Boolean).join(" • "))}</p>
+      <div class="tags">${(x.matches||[]).map(t=>`<span class="tag">✓ ${esc(t)}</span>`).join("")}${(x.gaps||[]).slice(0,4).map(t=>`<span class="tag gap">revisar: ${esc(t)}</span>`).join("")}</div>
+      <div class="opp-actions">
+        <button data-job-detail="${saved?"s":"r"}-${index}">Ver resumo</button>
+        ${saved?`<button data-job-del="${index}" class="danger">Excluir</button>`:`<button data-job-save="${index}">Salvar</button>`}
+      </div>
+      <p>Fonte: ${esc(source)}</p>
+    </div>
+    <div class="score"><div class="score-circle">${x.score||0}%</div><p>compatibilidade</p></div>
+  </article>`;
+}
+function jobDetailBody(x){
+  const description=(x.description||"").trim();
+  const matches=(x.matches||[]).map(v=>`<span class="tag">✓ ${esc(v)}</span>`).join("");
+  const gaps=(x.gaps||[]).slice(0,6).map(v=>`<span class="tag gap">revisar: ${esc(v)}</span>`).join("");
+  return `
+    <div class="detail-meta">${[x.company,x.location,x.category,x.publication_date,x.source].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join("")}</div>
+    <div class="detail-score"><strong>${x.score||0}%</strong><span>compatibilidade estimada com seu perfil</span></div>
+    ${description?`<section class="detail-section"><h3>Resumo da vaga</h3><p>${esc(description.slice(0,2400))}</p></section>`:""}
+    ${matches||gaps?`<section class="detail-section"><h3>Relação com seu perfil</h3><div class="tags">${matches}${gaps}</div></section>`:""}
+  `;
+}
+function renderJobs(){
+  document.getElementById("recommendedJobs").innerHTML=recommendedJobs.map((x,i)=>renderJobCard(x,i,false)).join("");
+  const saved=data.savedJobs.map(x=>({...x,...matchInfo(`${x.title} ${x.description||""}`)}));
+  document.getElementById("savedJobs").innerHTML=saved.map((x,i)=>renderJobCard(x,i,true)).join("");
+  const visible=currentJobTab==="recommended"?recommendedJobs:saved;
+  document.getElementById("jobEmpty").classList.toggle("hidden",visible.length>0);
+}
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{currentJobTab=b.dataset.jobTab;setJobTab();renderJobs()});
-function setJobTab(){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.jobTab===currentJobTab));document.getElementById("recommendedJobs").classList.toggle("hidden",currentJobTab!=="recommended");document.getElementById("savedJobs").classList.toggle("hidden",currentJobTab!=="saved")}
-document.getElementById("page-vagas").onclick=e=>{const s=e.target.closest("[data-job-save]"),d=e.target.closest("[data-job-del]"),o=e.target.closest("[data-job-open]");if(s){data.savedJobs.push(recommendedJobs[+s.dataset.jobSave]);save();renderAll();toast("Vaga salva.")}if(d&&confirm("Excluir vaga salva?")){data.savedJobs.splice(+d.dataset.jobDel,1);save();renderAll()}if(o){const [type,i]=o.dataset.jobOpen.split("-"),x=type==="s"?data.savedJobs[+i]:recommendedJobs[+i];if(x.url)window.open(x.url,"_blank","noopener,noreferrer")}};
+function setJobTab(){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.jobTab===currentJobTab));
+  document.getElementById("recommendedJobs").classList.toggle("hidden",currentJobTab!=="recommended");
+  document.getElementById("savedJobs").classList.toggle("hidden",currentJobTab!=="saved");
+}
+document.getElementById("page-vagas").onclick=e=>{
+  const saveBtn=e.target.closest("[data-job-save]");
+  const delBtn=e.target.closest("[data-job-del]");
+  const detailBtn=e.target.closest("[data-job-detail]");
+
+  if(saveBtn){
+    const x=recommendedJobs[+saveBtn.dataset.jobSave];
+    if(x&&!data.savedJobs.some(y=>y.url===x.url))data.savedJobs.push(x);
+    save();renderAll();toast("Vaga salva.");
+  }
+  if(delBtn&&confirm("Excluir vaga salva?")){
+    data.savedJobs.splice(+delBtn.dataset.jobDel,1);save();renderAll();
+  }
+  if(detailBtn){
+    const [type,i]=detailBtn.dataset.jobDetail.split("-");
+    const raw=type==="s"?data.savedJobs[+i]:recommendedJobs[+i];
+    if(raw){
+      const x={...raw,...matchInfo(`${raw.title} ${raw.description||""} ${raw.category||""}`)};
+      openDetailModal(x.title+(x.company?` — ${x.company}`:""),jobDetailBody(x),x.url,"Abrir vaga");
+    }
+  }
+};
 
 // FORMAÇÕES / CURSOS RECOMENDADOS
 document.getElementById("addLearning").onclick=()=>learningModal();
 function learningModal(i=null){const x=i===null?{}:data.savedLearning[i];openModal(i===null?"Salvar formação":"Editar formação",`<div class="field"><label>Instituição / plataforma</label><input id="mInstitution" value="${esc(x.institution||"")}"></div><div class="field"><label>Curso / programa</label><input id="mProgram" value="${esc(x.program||"")}"></div><div class="field"><label>Tipo</label><input id="mType" value="${esc(x.type||"")}"></div><div class="field"><label>Modalidade</label><input id="mMode" value="${esc(x.mode||"")}"></div><div class="field"><label>Link</label><input id="mLink" value="${esc(x.link||"")}"></div><div class="field"><label>Nota / estrelas</label><input id="mRating" placeholder="Ex.: 4,7" value="${esc(x.rating||"")}"></div><div class="field"><label>Preço / promoção</label><input id="mPromo" value="${esc(x.promo||"")}"></div><div class="field"><label>Conteúdo / proposta</label><textarea id="mTopics">${esc(x.topics||"")}</textarea></div>`,()=>{const o={institution:val("mInstitution"),program:val("mProgram"),type:val("mType"),mode:val("mMode"),link:val("mLink"),rating:val("mRating"),promo:val("mPromo"),topics:val("mTopics")};if(!o.program)return alert("Informe o curso/programa.");if(i===null)data.savedLearning.push(o);else data.savedLearning[i]=o;save();closeModal();renderAll();toast("Formação salva.")})}
-function learningCard(x,i){const m=matchInfo(`${x.program} ${x.type||""} ${x.topics||""}`);return `<article class="opp-card"><div><h3>${esc(x.program)}${x.institution?" — "+esc(x.institution):""}</h3><p>${esc([x.type,x.mode,x.rating?x.rating+"★":"",x.promo].filter(Boolean).join(" • "))}</p><p>${esc(x.topics||"")}</p><div class="opp-actions">${x.link?`<button data-learn-open="${i}">Abrir</button>`:""}<button data-learn-journey="${i}">Adicionar à Jornada</button><button data-learn-edit="${i}">Editar</button><button class="danger" data-learn-del="${i}">Excluir</button></div></div><div class="score"><div class="score-circle">${m.score}%</div><p>alinhamento</p></div></article>`}
-function recommendedLearningCard(x,i){const m=matchInfo(`${x.program} ${x.type||""} ${x.topics||""}`);return `<article class="opp-card"><div><h3>${esc(x.program)}${x.institution?" — "+esc(x.institution):""}</h3><p>${esc([x.type,x.mode,x.rating?x.rating+"★":"",x.promo].filter(Boolean).join(" • "))}</p><p>${esc(x.topics||"")}</p><div class="opp-actions"><button data-rec-learn-open="${i}">Ver no site oficial</button><button data-rec-learn-save="${i}">Salvar</button><button data-rec-learn-journey="${i}">Adicionar à Jornada</button></div></div><div class="score"><div class="score-circle">${m.score}%</div><p>alinhamento</p></div></article>`}
+function learningDetailBody(x){
+  const m=matchInfo(`${x.program} ${x.type||""} ${x.topics||""}`);
+  return `
+    <div class="detail-meta">${[x.institution,x.type,x.mode,x.rating?x.rating+"★":"",x.source].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join("")}</div>
+    <div class="detail-score"><strong>${m.score}%</strong><span>alinhamento estimado com seu perfil</span></div>
+    ${x.promo?`<section class="detail-section"><h3>Condição / informação</h3><p>${esc(x.promo)}</p></section>`:""}
+    ${x.topics?`<section class="detail-section"><h3>Resumo da formação</h3><p>${esc(x.topics)}</p></section>`:""}
+  `;
+}
+function learningCard(x,i){
+  const m=matchInfo(`${x.program} ${x.type||""} ${x.topics||""}`);
+  return `<article class="opp-card"><div><h3>${esc(x.program)}${x.institution?" — "+esc(x.institution):""}</h3><p>${esc([x.type,x.mode,x.rating?x.rating+"★":"",x.promo].filter(Boolean).join(" • "))}</p><div class="opp-actions"><button data-learn-detail="${i}">Ver resumo</button><button data-learn-journey="${i}">Adicionar à Trilha</button><button data-learn-edit="${i}">Editar</button><button class="danger" data-learn-del="${i}">Excluir</button></div></div><div class="score"><div class="score-circle">${m.score}%</div><p>alinhamento</p></div></article>`;
+}
+function recommendedLearningCard(x,i){
+  const m=matchInfo(`${x.program} ${x.type||""} ${x.topics||""}`);
+  return `<article class="opp-card"><div><h3>${esc(x.program)}${x.institution?" — "+esc(x.institution):""}</h3><p>${esc([x.type,x.mode,x.rating?x.rating+"★":"",x.promo].filter(Boolean).join(" • "))}</p><div class="opp-actions"><button data-rec-learn-detail="${i}">Ver resumo</button><button data-rec-learn-save="${i}">Salvar</button><button data-rec-learn-journey="${i}">Adicionar à Trilha</button></div></div><div class="score"><div class="score-circle">${m.score}%</div><p>alinhamento</p></div></article>`;
+}
 function renderLearning(){
   document.getElementById("recommendedLearning").innerHTML=recommendedLearning.map(recommendedLearningCard).join("");
   document.getElementById("savedLearning").innerHTML=data.savedLearning.map(learningCard).join("");
@@ -497,20 +656,59 @@ document.getElementById("searchLearning").onclick=async()=>{
     const params=new URLSearchParams({type,mode,keyword:kw||"",price});
     const r=await fetch("/api/learning?"+params.toString()),j=await r.json();
     if(!r.ok)throw new Error(j.error||"Não foi possível pesquisar.");
-    recommendedLearning=j.items||[];currentLearningTab="recommended";setLearningTab();renderLearning();note.textContent=j.note||`${recommendedLearning.length} opções encontradas.`;
-  }catch(err){recommendedLearning=[];renderLearning();note.textContent=err.message||"A pesquisa não respondeu agora."}
+    recommendedLearning=j.items||[];
+    currentLearningTab="recommended";
+    setLearningTab();renderLearning();
+    note.textContent=j.note||`${recommendedLearning.length} opções encontradas.`;
+  }catch(err){
+    recommendedLearning=[];renderLearning();
+    note.textContent=err.message||"A pesquisa não respondeu agora.";
+  }
 };
 document.getElementById("page-formacoes").onclick=e=>{
-  const o=e.target.closest("[data-learn-open]"),j=e.target.closest("[data-learn-journey]"),a=e.target.closest("[data-learn-edit]"),d=e.target.closest("[data-learn-del]"),g=e.target.closest("[data-gap-search]");
-  const ro=e.target.closest("[data-rec-learn-open]"),rs=e.target.closest("[data-rec-learn-save]"),rj=e.target.closest("[data-rec-learn-journey]");
-  if(o)window.open(normalUrl(data.savedLearning[+o.dataset.learnOpen].link),"_blank","noopener,noreferrer");
-  if(j){const x=data.savedLearning[+j.dataset.learnJourney];data.journey.push({title:x.program,description:`${x.institution||""} ${x.type||""}`.trim(),status:"Não iniciado"});save();renderAll();toast("Adicionado à Jornada.")}
-  if(a)learningModal(+a.dataset.learnEdit);
-  if(d&&confirm("Excluir esta formação?")){data.savedLearning.splice(+d.dataset.learnDel,1);save();renderAll()}
-  if(ro){const x=recommendedLearning[+ro.dataset.recLearnOpen];if(x?.link)window.open(normalUrl(x.link),"_blank","noopener,noreferrer")}
-  if(rs){const x=recommendedLearning[+rs.dataset.recLearnSave];if(x&&!data.savedLearning.some(y=>y.program===x.program&&y.institution===x.institution)){data.savedLearning.push({...x});save();renderAll();toast("Formação salva.")}}
-  if(rj){const x=recommendedLearning[+rj.dataset.recLearnJourney];if(x){data.journey.push({title:x.program,description:`${x.institution||""} ${x.type||""}`.trim(),status:"Não iniciado"});save();renderAll();toast("Adicionado à Jornada.")}}
-  if(g){document.getElementById("learningKeyword").value=g.dataset.gapSearch;document.getElementById("searchLearning").click()}
+  const detail=e.target.closest("[data-learn-detail]");
+  const journey=e.target.closest("[data-learn-journey]");
+  const edit=e.target.closest("[data-learn-edit]");
+  const del=e.target.closest("[data-learn-del]");
+  const gap=e.target.closest("[data-gap-search]");
+  const recDetail=e.target.closest("[data-rec-learn-detail]");
+  const recSave=e.target.closest("[data-rec-learn-save]");
+  const recJourney=e.target.closest("[data-rec-learn-journey]");
+
+  if(detail){
+    const x=data.savedLearning[+detail.dataset.learnDetail];
+    if(x)openDetailModal(x.program,learningDetailBody(x),x.link,"Abrir site oficial");
+  }
+  if(journey){
+    const x=data.savedLearning[+journey.dataset.learnJourney];
+    data.journey.push({title:x.program,description:`${x.institution||""} ${x.type||""}`.trim(),status:"Não iniciado"});
+    save();renderAll();toast("Adicionado à Trilha.");
+  }
+  if(edit)learningModal(+edit.dataset.learnEdit);
+  if(del&&confirm("Excluir esta formação?")){
+    data.savedLearning.splice(+del.dataset.learnDel,1);save();renderAll();
+  }
+  if(recDetail){
+    const x=recommendedLearning[+recDetail.dataset.recLearnDetail];
+    if(x)openDetailModal(x.program,learningDetailBody(x),x.link,"Abrir site oficial");
+  }
+  if(recSave){
+    const x=recommendedLearning[+recSave.dataset.recLearnSave];
+    if(x&&!data.savedLearning.some(y=>y.program===x.program&&y.institution===x.institution)){
+      data.savedLearning.push({...x});save();renderAll();toast("Formação salva.");
+    }
+  }
+  if(recJourney){
+    const x=recommendedLearning[+recJourney.dataset.recLearnJourney];
+    if(x){
+      data.journey.push({title:x.program,description:`${x.institution||""} ${x.type||""}`.trim(),status:"Não iniciado"});
+      save();renderAll();toast("Adicionado à Trilha.");
+    }
+  }
+  if(gap){
+    document.getElementById("learningKeyword").value=gap.dataset.gapSearch;
+    document.getElementById("searchLearning").click();
+  }
 };
 
 // NORNA IA
@@ -519,7 +717,7 @@ document.getElementById("aiAsk").onclick=async()=>{const q=val("aiQuestion");if(
 // DASHBOARD
 function profileCompletion(){
   const p=data.profile;
-  const checks=[p.name,p.age,p.area||p.role,p.level,p.mode,p.location,p.about];
+  const checks=[p.name,p.birthDate||p.age,p.area||p.role,p.level,p.mode,p.location,p.about];
   return Math.round(checks.filter(Boolean).length/checks.length*100);
 }
 
@@ -538,9 +736,9 @@ function renderDashboard(){
   if(dashGoalText)dashGoalText.textContent=p.area?[`Área: ${p.area}`,p.mode,p.location].filter(Boolean).join(" • "):"Complete seu perfil para começar.";
 
   let next="Complete seu perfil";
-  let txt="Nome, idade, objetivo e preferências ajudam a NORNA a personalizar sua jornada.";
+  let txt="Nome, data de nascimento, objetivo e preferências ajudam a NORNA a personalizar sua experiência.";
   if(profileCompletion()>=70){next="Envie seu currículo";txt="Seu perfil já tem uma boa base. Agora adicione seu currículo."}
-  if(data.resumeText){next="Organize sua jornada";txt="Com o currículo lido, escolha os próximos estudos e etapas."}
+  if(data.resumeText){next="Organize sua trilha";txt="Com o currículo lido, escolha os próximos estudos e etapas da sua trilha."}
   if(data.journey.length){next="Acompanhe sua evolução";txt="Continue atualizando suas etapas conforme avança."}
 
   const dashNext=document.getElementById("dashNext");
