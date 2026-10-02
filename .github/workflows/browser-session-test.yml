@@ -77,10 +77,50 @@ jobs:
           console.log('PROFILE NAME AFTER RELOAD:',savedName);
           if(savedName!=='Camila Monteiro') throw new Error('Perfil não persistiu corretamente');
 
+          await page.fill('#profileAge','32');
+          await page.fill('#profileArea','Ciência de Dados');
+          await page.selectOption('#profileLevel',{label:'Júnior'});
+          await page.waitForTimeout(1200);
+          const topProfile=await page.textContent('#topProfileChip');
+          console.log('TOP PROFILE:',topProfile);
+          if(!topProfile.includes('32 anos')) throw new Error('Idade não apareceu no topo');
+          if(!topProfile.includes('Ciência de Dados Júnior')) throw new Error('Objetivo não apareceu no topo');
+
+          await page.click('[data-page="ia"]');
+          await page.waitForSelector('#page-ia.active');
+          if(await page.locator('.page.active').count()!==1) throw new Error('Mais de uma tela ficou ativa');
+
+          await page.click('[data-page="curriculo"]');
+          await page.waitForSelector('#page-curriculo.active');
+          const resumeButtons=await page.locator('#page-curriculo input[type="file"]').count();
+          if(resumeButtons!==1) throw new Error('Tela de currículo não foi simplificada');
+
           const footer=await page.textContent('.app-footer');
           if(!footer.includes('Camila Monteiro') || !footer.includes('2026')) throw new Error('Rodapé não apareceu');
 
-          console.log('SESSION + PROFILE FLOW OK');
+          const nativeContext=await browser.newContext({
+            userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36 NORNA-Android/0.2',
+            viewport:{width:390,height:844}
+          });
+          const native=await nativeContext.newPage();
+          await native.goto(base+'/mobile.html?mode=login',{waitUntil:'domcontentloaded',timeout:90000});
+          await native.fill('#loginEmail',email);
+          await native.fill('#loginPassword',password);
+          await native.click('#loginForm button[type="submit"]');
+          await native.waitForURL('**/app.html',{timeout:90000});
+          await native.waitForSelector('body.native-app');
+          await native.waitForSelector('#nativeBottomNav');
+          if(await native.locator('.page.active').count()!==1) throw new Error('Android mostrou várias telas juntas');
+
+          await native.click('[data-mobile-page="curriculo"]');
+          await native.waitForSelector('#page-curriculo.active');
+          if(await native.locator('.page.active').count()!==1) throw new Error('Menu Android não separou as telas');
+
+          await native.click('[data-mobile-page="ia"]');
+          await native.waitForSelector('#page-ia.active');
+
+          console.log('SESSION + PROFILE + ANDROID FLOW OK');
+          await nativeContext.close();
           await browser.close();
           EOF
           node browser-session.mjs
