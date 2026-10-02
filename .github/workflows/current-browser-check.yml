@@ -1,3 +1,4 @@
+# brazil no-gupy check
 # final rerun
 name: NORNA current browser check
 
@@ -74,13 +75,18 @@ jobs:
 
           await page.click('[data-page="vagas"]');
           await page.selectOption('#jobMarket','Brasil');
-          await page.selectOption('#jobMode','Remoto');
+          await page.selectOption('#jobMode','Indiferente');
           await page.fill('#jobKeyword','dados');
           await page.click('#findJobs');
           await page.waitForFunction(()=>!document.querySelector('#jobSearchNote')?.textContent.includes('Buscando'),{timeout:60000});
           const jobsText=await page.textContent('#jobSearchNote');
           console.log('BRAZIL JOBS:',jobsText);
           if(jobsText.includes('JOOBLE_API_KEY')||jobsText.includes('SERPER_API_KEY')) throw new Error('Brazil search still requires a key');
+          const brazilCards=await page.locator('#recommendedJobs .opp-card').count();
+          console.log('BRAZIL JOB CARDS:',brazilCards);
+          if(brazilCards<1) throw new Error('Brazil search returned no job cards');
+          const brazilBody=await page.textContent('#recommendedJobs');
+          if(/gupy/i.test(brazilBody)||/gupy/i.test(jobsText)) throw new Error('Forbidden source appeared in Brazil search');
 
           if(errors.length) throw new Error(errors.join(' | '));
           console.log('CURRENT NORNA CHECK OK');
