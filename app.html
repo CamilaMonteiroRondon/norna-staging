@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261002j">
+  <link rel="stylesheet" href="style.css?v=20261002g">
 </head>
 <body>
 <canvas id="appThreadCanvas" aria-hidden="true"></canvas>
@@ -225,7 +225,7 @@
           <div class="field"><label>Mercado</label><select id="jobMarket"><option value="Todos" selected>Brasil + Internacional</option><option value="Brasil">Somente Brasil</option><option value="Internacional">Somente Internacional</option></select></div>
           <div class="field"><label>Modalidade</label><select id="jobMode"><option value="">Usar meu perfil</option><option>Remoto</option><option>Híbrido</option><option>Presencial</option><option>Indiferente</option></select></div>
           <div class="field"><label>Recência</label><select id="jobRecency"><option value="1">Últimas 24 horas</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></div>
-          <div class="field"><label>Compatibilidade mínima</label><select id="jobMinMatch"><option value="0">Mostrar todas</option><option value="30">30% ou mais</option><option value="50" selected>50% ou mais</option><option value="70">70% ou mais</option></select></div>
+          <div class="field"><label>Compatibilidade mínima</label><select id="jobMinMatch"><option value="0" selected>Mostrar todas</option><option value="30">30% ou mais</option><option value="50">50% ou mais</option><option value="70">70% ou mais</option></select></div>
           <div class="field"><label>Palavra-chave opcional</label><input id="jobKeyword" placeholder="Ex.: Python, BI, estágio..."></div>
         </div>
         <p id="jobSearchNote" class="muted note">A busca prioriza o Brasil e também pode incluir vagas internacionais, conforme o filtro escolhido.</p>
@@ -312,7 +312,7 @@
 <div id="toast" class="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<script src="script.js?v=20261002j"></script>
+<script src="script.js?v=20261002g"></script>
 <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
