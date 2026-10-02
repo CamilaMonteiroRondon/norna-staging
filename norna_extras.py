@@ -948,6 +948,16 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
             if not slug:
                 continue
             search_url = "https://www.vagas.com.br/vagas-de-" + slug + "?ordenar_por=mais_recentes"
+
+            # Vagas.com.br exposes workplace filters in the search URL.
+            # Using them here means remote/hybrid/on-site searches already arrive filtered.
+            if mode == "Remoto":
+                search_url += "&m%5B%5D=100%25+Home+Office"
+            elif mode == "Híbrido":
+                search_url += "&m%5B%5D=Na+empresa+e+Home+Office"
+            elif mode == "Presencial":
+                search_url += "&m%5B%5D=Na+empresa"
+
             try:
                 page_html = fetch_text(search_url)
             except Exception:
