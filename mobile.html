@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Acesso — NORNA</title>
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="landing.css?v=20261001g">
+  <link rel="stylesheet" href="landing.css?v=20261002a">
 </head>
 <body class="app-auth-page access-page native-app-login">
   <canvas id="threadCanvas" aria-hidden="true"></canvas>
@@ -21,14 +21,12 @@
         </svg>
       </div>
     </div>
+    <p class="native-login-slogan">Seu caminho profissional, fio por fio.</p>
 
-    <section class="access-card">
+    <section class="access-card native-login-card">
       <div id="authMessage" class="auth-message hidden"></div>
       <div id="authOverlay" class="mobile-auth-container open">
-        <form id="loginForm" class="auth-form">
-          <p class="form-kicker">BEM-VINDA DE VOLTA</p>
-          <h2>Continue o seu fio.</h2>
-          <p>Entre para acessar sua jornada, seus estudos e oportunidades.</p>
+        <form id="loginForm" class="auth-form native-login-form">
           <label>E-mail<input id="loginEmail" type="email" autocomplete="email" required></label>
           <label>Senha<input id="loginPassword" type="password" autocomplete="current-password" required></label>
           <button type="submit">Fazer login</button>
@@ -69,8 +67,8 @@
     <footer class="access-footer">Feito por Camila Monteiro • 2026</footer>
   </main>
 
-  <script src="public.js?v=20261001g"></script>
-  <script src="auth.js?v=20261001g"></script>
+  <script src="public.js?v=20261002a"></script>
+  <script src="auth.js?v=20261002a"></script>
   <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
