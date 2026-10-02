@@ -143,7 +143,20 @@ function updateProfileHeader(){
   if(meta)meta.textContent=profileHeadline();
 
   const hello=document.getElementById("dashHello");
-  if(hello)hello.textContent=p.name?`Olá, ${p.name.split(" ")[0]}.`:"Olá.";
+  const greetingText=document.getElementById("dashGreetingText");
+  if(hello&&greetingText){
+    const greetings=[
+      ["Olá de novo.","Como vai seu dia? Vamos continuar de onde você parou?"],
+      ["Vamos continuar?","Um passo de cada vez também constrói uma trajetória."],
+      ["Que bom ter você por aqui.","Vamos olhar seus próximos passos na NORNA?"],
+      ["Mais um dia, mais um passo.","Veja o que já avançou e escolha o próximo movimento."],
+      ["Seu caminho continua.","Hoje pode ser um bom dia para organizar o próximo passo."]
+    ];
+    const now=new Date();
+    const index=(now.getFullYear()*372+(now.getMonth()+1)*31+now.getDate())%greetings.length;
+    hello.textContent=greetings[index][0];
+    greetingText.textContent=greetings[index][1];
+  }
 }
 
 Object.entries(pf).forEach(([k,id])=>{
@@ -174,10 +187,8 @@ function renderProfile(){
   const p=data.profile.photo||placeholder();
   const profileAvatar=document.getElementById("profileAvatar");
   const topAvatar=document.getElementById("topAvatar");
-  const dashAvatar=document.getElementById("dashAvatar");
   if(profileAvatar)profileAvatar.src=p;
   if(topAvatar)topAvatar.src=p;
-  if(dashAvatar)dashAvatar.src=p;
   updateProfileHeader();
 }
 const topProfileChip=document.getElementById("topProfileChip");
@@ -192,7 +203,34 @@ document.getElementById("journeyList").onclick=e=>{const a=e.target.closest("[da
 // COMPETÊNCIAS
 document.getElementById("addSkill").onclick=()=>skillModal();
 function skillModal(i=null){const x=i===null?{}:data.skills[i];openModal(i===null?"Adicionar competência":"Editar competência",`<div class="field"><label>Competência</label><input id="mSkill" value="${esc(x.name||"")}"></div><div class="field"><label>Nível de domínio (0 a 100)</label><input id="mLevel" type="number" min="0" max="100" value="${x.level??0}"></div>`,()=>{const o={name:val("mSkill"),level:clamp(val("mLevel"))};if(!o.name)return alert("Informe a competência.");if(i===null)data.skills.push(o);else data.skills[i]=o;save();closeModal();renderAll();toast("Competência salva.")})}
-function renderSkills(){const gs={strong:[],developing:[],next:[]};data.skills.forEach((x,i)=>gs[x.level>=70?"strong":x.level>0?"developing":"next"].push({...x,i}));[["strong","strongSkills","strongEmpty"],["developing","developingSkills","developingEmpty"],["next","nextSkills","nextEmpty"]].forEach(([g,l,e])=>{const box=document.getElementById(l);box.innerHTML="";gs[g].forEach(x=>{const el=document.createElement("div");el.className="skill-item";el.innerHTML=`<div class="skill-top"><strong>${esc(x.name)}</strong><span>${x.level}%</span></div><div class="track"><div class="fill" style="width:${x.level}%"></div></div><div class="item-actions"><button data-sedit="${x.i}">Editar</button><button class="danger" data-sdel="${x.i}">Excluir</button></div>`;box.appendChild(el)});document.getElementById(e).classList.toggle("hidden",gs[g].length>0)})}
+function renderSkills(){
+  const gs={strong:[],developing:[],next:[]};
+  data.skills.forEach((x,i)=>gs[x.level>=70?"strong":x.level>0?"developing":"next"].push({...x,i}));
+
+  [["strong","strongSkills","strongEmpty"],["developing","developingSkills","developingEmpty"],["next","nextSkills","nextEmpty"]].forEach(([g,l,e])=>{
+    const box=document.getElementById(l);
+    box.innerHTML="";
+
+    gs[g].forEach(x=>{
+      const el=document.createElement("div");
+      el.className="skill-item skill-compact";
+      el.innerHTML=`
+        <div class="skill-top">
+          <strong>${esc(x.name)}</strong>
+          <span>${x.level}%</span>
+        </div>
+        ${x.source==="resume"?'<small class="skill-source">do currículo</small>':""}
+        <div class="track"><div class="fill" style="width:${x.level}%"></div></div>
+        <div class="item-actions">
+          <button data-sedit="${x.i}">Editar</button>
+          <button class="danger" data-sdel="${x.i}">Excluir</button>
+        </div>`;
+      box.appendChild(el);
+    });
+
+    document.getElementById(e).classList.toggle("hidden",gs[g].length>0);
+  });
+}
 document.getElementById("page-competencias").onclick=e=>{const a=e.target.closest("[data-sedit]"),d=e.target.closest("[data-sdel]");if(a)skillModal(+a.dataset.sedit);if(d&&confirm("Excluir esta competência?")){data.skills.splice(+d.dataset.sdel,1);save();renderAll()}};
 
 // CURSOS
@@ -218,12 +256,33 @@ function replaceResumeAnalysis(x){
   if(!x)return;
   const p=x.profile||{};
 
-  // O currículo ajuda a completar o perfil, mas não substitui escolhas que a pessoa já fez.
+  // O currículo completa o perfil sem sobrescrever escolhas já feitas pela pessoa.
   ["name","about","area","role"].forEach(k=>{if(p[k]&&!data.profile[k])data.profile[k]=p[k]});
 
   data.education=dedupeBy(x.education||[],item=>`${item.course||""}|${item.institution||""}`);
   data.experience=dedupeBy(x.experience||[],item=>`${item.role||""}|${item.company||""}|${item.period||""}`);
-  data.skills=dedupeBy((x.skills||[]).map(item=>({name:item.name,level:item.level||40})),item=>item.name);
+
+  // Tudo que a NORNA identifica como competência no currículo é tratado como forte.
+  const resumeSkills=(x.skills||[])
+    .filter(item=>item?.name)
+    .map(item=>({name:item.name,level:85,source:"resume"}));
+  const manualSkills=(data.skills||[]).filter(item=>item?.source!=="resume");
+  data.skills=dedupeBy([...resumeSkills,...manualSkills],item=>item.name);
+
+  // Cursos/certificações do currículo entram automaticamente em Meus Cursos.
+  const resumeCourses=(x.courses||[])
+    .filter(item=>item?.name)
+    .map(item=>({
+      name:item.name,
+      platform:item.platform||"",
+      link:item.link||"",
+      status:"Concluído",
+      skill:item.skill||"",
+      progress:100,
+      source:"resume"
+    }));
+  const manualCourses=(data.courses||[]).filter(item=>item?.source!=="resume");
+  data.courses=dedupeBy([...manualCourses,...resumeCourses],item=>`${item.name||""}|${item.platform||""}`);
 }
 
 function structuredResumeText(){
