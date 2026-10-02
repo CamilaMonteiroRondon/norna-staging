@@ -8,12 +8,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261002e">
+  <link rel="stylesheet" href="style.css?v=20261002f">
 </head>
 <body>
+<canvas id="appThreadCanvas" aria-hidden="true"></canvas>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand brand-image-wrap"><div class="norna-wordmark" aria-label="NORNA"><span>NORNA</span><svg viewBox="0 0 310 78" aria-hidden="true"><path d="M18 49 C84 17,140 58,210 35 S263 29,292 42"/></svg></div></div>
+    <div class="brand brand-image-wrap"><div class="norna-wordmark" aria-label="NORNA"><span>NORNA</span><svg viewBox="0 0 310 78" aria-hidden="true"><path class="logo-thread logo-thread-a" d="M18 49 C84 17,140 58,210 35 S263 29,292 42"/><path class="logo-thread logo-thread-b" d="M22 34 C76 61,132 18,190 43 S251 55,290 30"/></svg></div></div>
 
     <nav class="nav">
       <button class="nav-btn active" data-page="dashboard">Início</button>
@@ -34,7 +35,7 @@
 
   <main class="content">
     <header class="topbar">
-      <div><span>NORNA</span><h1 id="pageTitle">Início</h1></div>
+      <div class="topbar-mobile-brand native-only"><span>NORNA</span></div>
       <div class="top-actions">
         <button id="nativeMoreButton" class="native-more-button native-only" type="button" aria-label="Mais opções">•••</button>
         <button id="topProfileChip" class="profile-chip profile-chip-button" type="button">
@@ -51,7 +52,6 @@
 
     <section id="page-dashboard" class="page active">
       <div class="dashboard-greeting">
-        <span class="label">INÍCIO</span>
         <h2 id="dashHello">Olá de novo.</h2>
         <p id="dashGreetingText" class="muted">Vamos continuar de onde você parou?</p>
       </div>
@@ -143,9 +143,9 @@
     </section>
 
     <section id="page-jornada" class="page">
-      <div class="intro with-action"><div><h2>Minha Trilha</h2><p>Competências mostram o que você já sabe. A Trilha organiza o que você quer fazer depois: cursos, metas e próximos passos.</p></div><button id="addJourney" class="primary">+ Adicionar etapa</button></div>
+      <div class="intro with-action"><div><h2>Minha Trilha</h2><p>Competências mostram o que você já sabe. A Trilha organiza o que você quer fazer depois: cursos, metas e próximos passos.</p></div><button id="addJourney" class="primary">+ Adicionar meta</button></div>
       <div id="journeyList" class="stack"></div>
-      <div id="journeyEmpty" class="big-empty"><h3>Sua trilha está vazia</h3><p>Adicione a primeira etapa quando quiser.</p></div>
+      <div id="journeyEmpty" class="big-empty"><h3>Sua trilha está vazia</h3><p>Cursos em andamento entram aqui automaticamente. Você também pode adicionar uma meta pessoal.</p></div>
     </section>
 
     <section id="page-cursos" class="page">
@@ -184,8 +184,8 @@
         <article class="card resume resume-preview-card">
           <div class="card-head">
             <div>
-              <span class="label">CURRÍCULO ORGANIZADO</span>
-              <h3>Seu currículo</h3>
+              <span class="label">DOCUMENTO</span>
+              <h3>Visualização</h3>
             </div>
             <button id="editResume" class="secondary" type="button">Editar currículo</button>
           </div>
@@ -292,7 +292,7 @@
 <div id="toast" class="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<script src="script.js?v=20261002e"></script>
+<script src="script.js?v=20261002f"></script>
 <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
