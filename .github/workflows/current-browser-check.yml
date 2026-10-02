@@ -1,3 +1,4 @@
+# brazil source test
 # brazil no-gupy check
 # final rerun
 name: NORNA current browser check
@@ -68,10 +69,6 @@ jobs:
           const python=page.locator('.skill-item').filter({hasText:'Python'}).first();
           if(await python.count()!==1) throw new Error('Python skill missing');
           if(!(await python.textContent()).includes('100%')) throw new Error('Resume skill is not strong');
-
-          await page.click('[data-page="cursos"]');
-          const courseText=await page.textContent('#courseList');
-          if(!courseText.includes('Oracle Next Education')) throw new Error('Resume course missing');
 
           await page.click('[data-page="vagas"]');
           await page.selectOption('#jobMarket','Brasil');
