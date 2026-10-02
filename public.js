@@ -13,14 +13,14 @@ if(canvas){
   addEventListener("resize",resize);resize();
 
   const threads=[
-    {base:.27,amp:54,freq:.0064,phase:0,speed:1.00,color:"rgba(122,88,85,.20)",width:.9},
-    {base:.32,amp:78,freq:.0054,phase:.7,speed:.82,color:"rgba(160,120,112,.19)",width:1.0},
-    {base:.38,amp:46,freq:.0078,phase:1.5,speed:1.14,color:"rgba(210,173,157,.24)",width:.8},
-    {base:.44,amp:88,freq:.0048,phase:2.1,speed:.73,color:"rgba(101,74,72,.16)",width:1.1},
-    {base:.50,amp:60,freq:.0069,phase:2.9,speed:.92,color:"rgba(181,137,126,.20)",width:.9},
-    {base:.56,amp:82,freq:.0056,phase:3.8,speed:.78,color:"rgba(112,80,78,.15)",width:1.0},
-    {base:.62,amp:50,freq:.0073,phase:4.6,speed:1.08,color:"rgba(222,187,169,.21)",width:.75},
-    {base:.68,amp:74,freq:.0051,phase:5.2,speed:.86,color:"rgba(139,99,96,.15)",width:.85}
+    {base:.27,amp:54,freq:.0064,phase:0,speed:1.00,color:"rgba(137,111,133,.20)",width:.9},
+    {base:.32,amp:78,freq:.0054,phase:.7,speed:.82,color:"rgba(176,145,170,.18)",width:1.0},
+    {base:.38,amp:46,freq:.0078,phase:1.5,speed:1.14,color:"rgba(205,176,198,.22)",width:.8},
+    {base:.44,amp:88,freq:.0048,phase:2.1,speed:.73,color:"rgba(116,91,113,.15)",width:1.1},
+    {base:.50,amp:60,freq:.0069,phase:2.9,speed:.92,color:"rgba(188,153,181,.19)",width:.9},
+    {base:.56,amp:82,freq:.0056,phase:3.8,speed:.78,color:"rgba(128,101,124,.14)",width:1.0},
+    {base:.62,amp:50,freq:.0073,phase:4.6,speed:1.08,color:"rgba(218,191,211,.20)",width:.75},
+    {base:.68,amp:74,freq:.0051,phase:5.2,speed:.86,color:"rgba(151,119,145,.14)",width:.85}
   ];
 
   function drawThread(t){
