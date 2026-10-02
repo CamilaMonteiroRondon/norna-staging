@@ -712,6 +712,63 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
             })
         return "Arbeitnow", rows
 
+    def jobicy_brazil_provider():
+        rows = []
+        params = {
+            "count": 100,
+            "geo": "brazil",
+            "tag": base[:120]
+        }
+        payload = fetch_json("https://jobicy.com/api/v2/remote-jobs?" + urlencode(params))
+
+        for item in payload.get("jobs", []) or []:
+            title = (item.get("jobTitle") or "").strip()
+            link = (item.get("url") or "").strip()
+            company = (item.get("companyName") or "").strip()
+            location_text = (item.get("jobGeo") or "Brazil").strip()
+            excerpt = strip_html(item.get("jobExcerpt") or "")
+            description = strip_html(item.get("jobDescription") or "")
+            published = item.get("pubDate") or ""
+            industries = item.get("jobIndustry") or []
+            types = item.get("jobType") or []
+            level = item.get("jobLevel") or ""
+
+            if not title or not link:
+                continue
+
+            pub = parse_dt(published)
+            if pub and pub < cutoff:
+                continue
+
+            salary = ""
+            if item.get("salaryMin") or item.get("salaryMax"):
+                currency = item.get("salaryCurrency") or ""
+                period = item.get("salaryPeriod") or ""
+                salary = " ".join([
+                    str(item.get("salaryMin") or ""),
+                    str(item.get("salaryMax") or ""),
+                    currency,
+                    period
+                ]).strip()
+
+            rows.append({
+                "id": "jobicy-" + str(item.get("id", "")),
+                "title": title,
+                "company": company,
+                "location": location_text,
+                "category": " • ".join([str(x) for x in industries[:2]]) or "Vaga remota no Brasil",
+                "description": (excerpt + "\n\n" + description).strip()[:6000],
+                "publication_date": published,
+                "url": link,
+                "remote": True,
+                "source": "Jobicy Brasil",
+                "market": "Brasil",
+                "tags": ["Brasil", "remoto", level] + [str(x) for x in types[:3]],
+                "salary": salary
+            })
+
+        return "Jobicy Brasil", rows
+
     def jooble_provider():
         rows = []
         for item in jooble_search(base, brazil_location, 1, 25):
@@ -774,6 +831,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
     providers = []
     if wants_brazil:
+        providers.append(jobicy_brazil_provider)
         if os.getenv("JOOBLE_API_KEY", "").strip():
             providers.append(jooble_provider)
         if os.getenv("SERPER_API_KEY", "").strip():
@@ -828,8 +886,10 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
     else:
         note += "."
 
-    if wants_brazil and not any(src in sources for src in ("Jooble Brasil", "Web Brasil")):
-        note += " A fonte brasileira ao vivo ainda precisa de JOOBLE_API_KEY ou SERPER_API_KEY no Render."
+    if wants_brazil and not any(src in sources for src in ("Jobicy Brasil", "Jooble Brasil", "Web Brasil")):
+        note += " A fonte brasileira não respondeu agora. Tente novamente em alguns instantes."
+    elif wants_brazil and "Jobicy Brasil" in sources and not any(src in sources for src in ("Jooble Brasil", "Web Brasil")):
+        note += " A busca brasileira gratuita está ativa para vagas remotas. Fontes adicionais podem ser conectadas depois para ampliar vagas presenciais e híbridas."
 
     return {"jobs": result, "sources": sources, "market": market, "brazil_count": brazil_count, "international_count": intl_count, "note": note}
 
