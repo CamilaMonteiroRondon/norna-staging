@@ -99,6 +99,7 @@ function go(page){
 
   closeNativeMore();
   renderAll();
+  if(page==="perfil")showProfileEditor(false);
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
