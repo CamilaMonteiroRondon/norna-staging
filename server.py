@@ -34,9 +34,11 @@ def request_base_url(handler):
     return f'{proto}://{host}'
 
 EMPTY_DATA = {
-    'profile': {'photo': '', 'name': '', 'age': '', 'area': '', 'role': '', 'level': '', 'mode': '', 'location': '', 'study': '', 'opportunity': '', 'about': ''},
+    'profile': {'photo': '', 'name': '', 'age': '', 'birthDate': '', 'area': '', 'role': '', 'level': '', 'mode': '', 'location': '', 'study': '', 'opportunity': '', 'about': ''},
     'education': [], 'experience': [], 'journey': [], 'courses': [], 'skills': [], 'savedJobs': [], 'savedLearning': [],
-    'resumeText': '', 'resumeFileName': ''
+    'resumeText': '', 'resumeFileName': '',
+    'resumeContact': {'email': '', 'phone': '', 'linkedin': '', 'github': ''},
+    'resumeSyncVersion': 0
 }
 
 def db():
@@ -319,9 +321,10 @@ class Handler(SimpleHTTPRequestHandler):
             role = (qs.get('role', [''])[0] or '').strip()
             area = (qs.get('area', [''])[0] or '').strip()
             location = (qs.get('location', [''])[0] or '').strip()
+            market = (qs.get('market', ['Todos'])[0] or 'Todos').strip()
             mode = (qs.get('mode', [''])[0] or '').strip()
             days = max(1, min(60, int(qs.get('days', ['7'])[0] or 7)))
-            result = search_jobs(query=query, keyword=keyword, role=role, area=area, location=location, mode=mode, days=days)
+            result = search_jobs(query=query, keyword=keyword, role=role, area=area, location=location, market=market, mode=mode, days=days)
             return self.send_json(result)
 
         if path == '/api/learning':
