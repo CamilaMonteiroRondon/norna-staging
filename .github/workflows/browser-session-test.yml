@@ -1,4 +1,5 @@
 name: NORNA browser session test
+# updated after dashboard/resume changes
 
 on:
   workflow_dispatch:
