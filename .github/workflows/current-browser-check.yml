@@ -72,6 +72,16 @@ jobs:
           const courseText=await page.textContent('#courseList');
           if(!courseText.includes('Oracle Next Education')) throw new Error('Resume course missing');
 
+          await page.click('[data-page="vagas"]');
+          await page.selectOption('#jobMarket','Brasil');
+          await page.selectOption('#jobMode','Remoto');
+          await page.fill('#jobKeyword','dados');
+          await page.click('#findJobs');
+          await page.waitForFunction(()=>!document.querySelector('#jobSearchNote')?.textContent.includes('Buscando'),{timeout:60000});
+          const jobsText=await page.textContent('#jobSearchNote');
+          console.log('BRAZIL JOBS:',jobsText);
+          if(jobsText.includes('JOOBLE_API_KEY')||jobsText.includes('SERPER_API_KEY')) throw new Error('Brazil search still requires a key');
+
           if(errors.length) throw new Error(errors.join(' | '));
           console.log('CURRENT NORNA CHECK OK');
           await browser.close();
