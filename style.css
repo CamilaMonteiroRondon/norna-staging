@@ -607,3 +607,94 @@ body.native-app .native-more-sheet.open{
   .resume-workspace{grid-template-columns:1fr}
   .resume-upload-card{position:static}
 }
+
+
+/* Dashboard greeting + competency grid 2026-10-02 */
+.dashboard-greeting{
+  margin-bottom:18px;
+  padding:8px 2px 4px;
+}
+.dashboard-greeting h2{
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:30px;
+  font-weight:500;
+  line-height:1.05;
+  margin:2px 0 7px;
+}
+.dashboard-greeting p{
+  max-width:620px;
+  font-size:11px;
+}
+
+/* Competências em grade para evitar listas muito compridas */
+#page-competencias>.cards3{
+  grid-template-columns:1fr!important;
+  gap:14px;
+}
+#page-competencias>.cards3>.card{
+  padding:18px;
+}
+#page-competencias>.cards3>.card>h3{
+  margin-bottom:12px;
+}
+.skill-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
+  gap:10px;
+}
+.skill-compact{
+  margin:0!important;
+  padding:12px!important;
+  min-height:112px;
+  border-radius:14px!important;
+  background:rgba(219,205,196,.58)!important;
+  border:1px solid rgba(76,55,49,.10)!important;
+}
+.skill-compact .skill-top{
+  align-items:flex-start;
+  gap:8px;
+}
+.skill-compact .skill-top strong{
+  font-size:11px;
+  line-height:1.25;
+}
+.skill-compact .skill-top span{
+  flex:0 0 auto;
+  font-size:9px;
+}
+.skill-compact .track{
+  margin-top:8px;
+}
+.skill-compact .item-actions{
+  margin-top:8px;
+}
+.skill-source{
+  display:block;
+  margin-top:4px;
+  color:#8b615f;
+  font-size:7px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+body.native-app .dashboard-greeting{
+  padding:6px 2px 2px;
+  margin-bottom:14px;
+}
+body.native-app .dashboard-greeting h2{
+  font-size:27px;
+}
+body.native-app .skill-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+body.native-app .skill-compact{
+  min-height:106px;
+  padding:10px!important;
+}
+body.native-app .skill-compact .skill-top strong{
+  font-size:10px;
+}
+@media(max-width:360px){
+  body.native-app .skill-grid{grid-template-columns:1fr}
+}
