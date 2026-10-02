@@ -769,6 +769,145 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
         return "Jobicy Brasil", rows
 
+    def gupy_brazil_provider():
+        rows = []
+
+        # Gupy exposes a public employability search used by its own job portal.
+        # It works without a private employer token and covers remote, hybrid and on-site jobs in Brazil.
+        search_term = (keyword or query or role or area or "dados").strip()
+        terms_to_try = [search_term]
+        simplified = re.sub(r"\b(junior|júnior|jr\.?|pleno|senior|sênior|sr\.?)\b", "", search_term, flags=re.I)
+        simplified = re.sub(r"\s+", " ", simplified).strip()
+        if simplified and fold(simplified) != fold(search_term):
+            terms_to_try.append(simplified)
+        if area and fold(area) not in {fold(x) for x in terms_to_try}:
+            terms_to_try.append(area.strip())
+
+        mode_map = {
+            "Remoto": "remote",
+            "Híbrido": "hybrid",
+            "Presencial": "on-site"
+        }
+
+        payload = None
+        used_term = ""
+        for term in terms_to_try[:3]:
+            params = {
+                "jobName": term,
+                "offset": 0,
+                "limit": 60
+            }
+            if mode in mode_map:
+                params["workplaceType"] = mode_map[mode]
+
+            try:
+                candidate = fetch_json(
+                    "https://employability-portal.gupy.io/api/v1/jobs?" + urlencode(params)
+                )
+            except Exception:
+                continue
+
+            possible = []
+            if isinstance(candidate, list):
+                possible = candidate
+            elif isinstance(candidate, dict):
+                possible = (
+                    candidate.get("data")
+                    or candidate.get("results")
+                    or candidate.get("jobs")
+                    or candidate.get("items")
+                    or []
+                )
+
+            if possible:
+                payload = possible
+                used_term = term
+                break
+
+        for item in payload or []:
+            title = (item.get("name") or item.get("title") or "").strip()
+            if not title:
+                continue
+
+            career_page = item.get("careerPage") or {}
+            company_obj = item.get("company") or {}
+
+            company = (
+                item.get("careerPageName")
+                or career_page.get("name")
+                or company_obj.get("name")
+                or ""
+            )
+
+            city = item.get("addressCity") or item.get("city") or ""
+            state = item.get("addressStateShortName") or item.get("stateCode") or item.get("addressState") or item.get("state") or ""
+            country = item.get("addressCountry") or item.get("country") or "Brasil"
+            location_text = ", ".join([x for x in [city, state, country] if x]) or "Brasil"
+
+            workplace = (item.get("workplaceType") or "").strip()
+            workplace_label = {
+                "remote": "Remoto",
+                "hybrid": "Híbrido",
+                "on-site": "Presencial"
+            }.get(workplace, workplace or "Não informado")
+
+            description = strip_html(
+                item.get("description")
+                or item.get("descriptionHtml")
+                or ""
+            )
+            prerequisites = strip_html(
+                item.get("prerequisites")
+                or item.get("requirements")
+                or ""
+            )
+            responsibilities = strip_html(
+                item.get("responsibilities")
+                or ""
+            )
+
+            published = item.get("publishedAt") or item.get("publishedDate") or ""
+            pub = parse_dt(published)
+            if pub and pub < cutoff:
+                continue
+
+            job_url = (
+                item.get("jobUrl")
+                or item.get("applicationUrl")
+                or item.get("url")
+                or ""
+            )
+
+            # Build public Gupy detail URL when the feed returns the subdomain + id instead of a URL.
+            if not job_url and item.get("id"):
+                subdomain = (
+                    item.get("careerPageSubdomain")
+                    or career_page.get("subdomain")
+                    or company_obj.get("subdomain")
+                    or ""
+                )
+                if subdomain:
+                    job_url = "https://" + subdomain + ".gupy.io/jobs/" + str(item.get("id"))
+
+            rows.append({
+                "id": "gupy-" + str(item.get("id") or abs(hash(job_url + title))),
+                "title": title,
+                "company": company,
+                "location": location_text,
+                "category": " • ".join([x for x in [workplace_label, item.get("jobTypeLabel") or item.get("jobType") or ""] if x]),
+                "description": "\n\n".join([x for x in [description, prerequisites, responsibilities] if x])[:6000],
+                "publication_date": published,
+                "url": job_url,
+                "remote": workplace == "remote",
+                "workplace_type": workplace,
+                "source": "Gupy Brasil",
+                "market": "Brasil",
+                "tags": ["Brasil", workplace_label, used_term],
+                "salary": item.get("salary") or ""
+            })
+
+        return "Gupy Brasil", rows
+
     def jooble_provider():
         rows = []
         for item in jooble_search(base, brazil_location, 1, 25):
@@ -831,6 +970,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
     providers = []
     if wants_brazil:
+        providers.append(gupy_brazil_provider)
         providers.append(jobicy_brazil_provider)
         if os.getenv("JOOBLE_API_KEY", "").strip():
             providers.append(jooble_provider)
@@ -886,10 +1026,10 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
     else:
         note += "."
 
-    if wants_brazil and not any(src in sources for src in ("Jobicy Brasil", "Jooble Brasil", "Web Brasil")):
-        note += " A fonte brasileira não respondeu agora. Tente novamente em alguns instantes."
-    elif wants_brazil and "Jobicy Brasil" in sources and not any(src in sources for src in ("Jooble Brasil", "Web Brasil")):
-        note += " A busca brasileira gratuita está ativa para vagas remotas. Fontes adicionais podem ser conectadas depois para ampliar vagas presenciais e híbridas."
+    if wants_brazil and not any(src in sources for src in ("Gupy Brasil", "Jobicy Brasil", "Jooble Brasil", "Web Brasil")):
+        note += " As fontes brasileiras não responderam agora. Tente novamente em alguns instantes."
+    elif wants_brazil and "Gupy Brasil" in sources:
+        note += " A busca brasileira inclui vagas remotas, híbridas e presenciais da Gupy."
 
     return {"jobs": result, "sources": sources, "market": market, "brazil_count": brazil_count, "international_count": intl_count, "note": note}
 
