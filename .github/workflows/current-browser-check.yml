@@ -1,0 +1,76 @@
+name: NORNA current browser check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/current-browser-check.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Check current NORNA
+        shell: bash
+        run: |
+          cat > check.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const base='https://norna-staging.onrender.com';
+          const email=`check-${Date.now()}@example.com`;
+          const password='TesteNorna123!';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage();
+          page.setDefaultTimeout(60000);
+          page.setDefaultNavigationTimeout(90000);
+          const errors=[];
+          page.on('pageerror',e=>errors.push(e.message));
+
+          await page.goto(base+'/acesso.html?mode=register',{waitUntil:'domcontentloaded'});
+          await page.fill('#registerEmail',email);
+          await page.fill('#registerPassword',password);
+          await page.fill('#registerPassword2',password);
+          await page.click('#registerForm button[type="submit"]');
+          await page.waitForSelector('#authMessage:not(.hidden)');
+          await page.click('#registerForm [data-auth="login"]');
+          await page.fill('#loginEmail',email);
+          await page.fill('#loginPassword',password);
+          await page.click('#loginForm button[type="submit"]');
+          await page.waitForURL('**/app.html');
+          await page.waitForSelector('#page-dashboard.active');
+
+          if(await page.locator('#dashAvatar').count()) throw new Error('dashAvatar still exists');
+          if(!(await page.textContent('#dashHello')).trim()) throw new Error('Dashboard greeting missing');
+
+          await page.click('[data-page="curriculo"]');
+          await page.setInputFiles('#resumeFile',{
+            name:'cv.txt',
+            mimeType:'text/plain',
+            buffer:Buffer.from('Camila Monteiro\n\nCOMPETÊNCIAS TÉCNICAS\nPython\nSQL\nMySQL\n\nCURSOS E CERTIFICAÇÕES\nOracle Next Education — Alura\nFormação em Ciência de Dados — Alura\n')
+          });
+          await page.waitForFunction(()=>document.querySelector('#resumeImportStatus')?.textContent.includes('Currículo lido'));
+
+          await page.click('[data-page="competencias"]');
+          const python=page.locator('.skill-item').filter({hasText:'Python'}).first();
+          if(await python.count()!==1) throw new Error('Python skill missing');
+          if(!(await python.textContent()).includes('85%')) throw new Error('Resume skill is not strong');
+
+          await page.click('[data-page="cursos"]');
+          const courseText=await page.textContent('#courseList');
+          if(!courseText.includes('Oracle Next Education')) throw new Error('Resume course missing');
+
+          if(errors.length) throw new Error(errors.join(' | '));
+          console.log('CURRENT NORNA CHECK OK');
+          await browser.close();
+          EOF
+          node check.mjs
