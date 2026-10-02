@@ -698,3 +698,281 @@ body.native-app .skill-compact .skill-top strong{
 @media(max-width:360px){
   body.native-app .skill-grid{grid-template-columns:1fr}
 }
+
+
+/* NORNA refinement 2026-10-02d */
+
+/* Perfil em modo visual + edição separada */
+.profile-public-card{
+  padding:24px;
+}
+.profile-public-head{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding-bottom:20px;
+  border-bottom:1px solid rgba(76,55,49,.10);
+}
+.profile-public-avatar{
+  width:96px;
+  height:96px;
+  border-radius:28px;
+  object-fit:cover;
+}
+.profile-public-head h2{
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:30px;
+  font-weight:500;
+  margin:3px 0 5px;
+}
+.profile-public-headline{
+  color:#6f4d4a;
+  font-size:13px;
+  font-weight:700;
+}
+.profile-public-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:18px;
+}
+.profile-public-grid>div{
+  padding:13px 14px;
+  border-radius:14px;
+  background:rgba(219,205,196,.55);
+  border:1px solid rgba(76,55,49,.08);
+}
+.profile-public-grid span{
+  display:block;
+  color:var(--muted);
+  font-size:8px;
+  margin-bottom:4px;
+}
+.profile-public-grid strong{
+  font-size:10px;
+  line-height:1.35;
+}
+.profile-public-about{
+  margin-top:18px;
+  padding-top:4px;
+}
+.profile-public-about p{
+  margin-top:8px;
+  max-width:820px;
+  line-height:1.7;
+}
+
+/* Currículo formatado */
+.resume-document{
+  padding:0!important;
+  overflow:hidden;
+  background:#f4ede8!important;
+}
+.resume-paper{
+  min-height:470px;
+  padding:34px 38px 40px;
+  background:#f4ede8;
+  color:#342a27;
+}
+.resume-paper-head{
+  padding-bottom:20px;
+  border-bottom:2px solid rgba(111,77,74,.22);
+}
+.resume-paper-head h2{
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:28px;
+  line-height:1.1;
+  margin:0 0 6px;
+}
+.resume-paper-role{
+  margin:0;
+  color:#6f4d4a;
+  font-size:12px;
+  font-weight:700;
+}
+.resume-contact{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 14px;
+  margin-top:10px;
+}
+.resume-contact span{
+  color:#74655f;
+  font-size:9px;
+}
+.resume-section{
+  padding:18px 0 0;
+}
+.resume-section h4{
+  margin:0 0 9px;
+  padding-bottom:5px;
+  border-bottom:1px solid rgba(76,55,49,.12);
+  color:#6f4d4a;
+  font-size:10px;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.resume-section p{
+  margin:0;
+  font-size:10px;
+  line-height:1.65;
+}
+.resume-list{
+  display:grid;
+  gap:10px;
+}
+.resume-list>div{
+  display:grid;
+  gap:2px;
+}
+.resume-list strong{
+  font-size:10px;
+}
+.resume-list span,.resume-list small{
+  color:#74655f;
+  font-size:9px;
+}
+.resume-list p{
+  margin-top:3px;
+}
+.resume-list.compact{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.resume-skill-pills{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.resume-skill-pills span{
+  padding:6px 9px;
+  border-radius:999px;
+  background:#e3d5cc;
+  border:1px solid rgba(76,55,49,.10);
+  font-size:9px;
+  font-weight:700;
+}
+
+/* Modais de resumo */
+.detail-modal{
+  max-width:720px;
+}
+.detail-modal h2{
+  padding-right:30px;
+  margin:4px 0 12px;
+}
+.detail-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:10px 0 14px;
+}
+.detail-meta span{
+  padding:6px 8px;
+  border-radius:999px;
+  background:rgba(219,205,196,.62);
+  color:#6d5c56;
+  font-size:8px;
+}
+.detail-score{
+  display:flex;
+  align-items:baseline;
+  gap:9px;
+  padding:12px 14px;
+  margin:8px 0 14px;
+  border-radius:14px;
+  background:rgba(147,104,106,.08);
+}
+.detail-score strong{
+  color:#6f4d4a;
+  font-size:22px;
+}
+.detail-score span{
+  color:var(--muted);
+  font-size:9px;
+}
+.detail-section{
+  margin-top:15px;
+}
+.detail-section h3{
+  font-size:12px;
+  margin-bottom:6px;
+}
+.detail-section p{
+  color:#5f514c;
+  font-size:10px;
+  line-height:1.65;
+  white-space:pre-wrap;
+}
+.detail-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+}
+
+/* Trilha */
+#page-jornada .intro p{
+  max-width:760px;
+}
+
+@media(max-width:760px){
+  .profile-public-head{
+    align-items:flex-start;
+  }
+  .profile-public-avatar{
+    width:78px;
+    height:78px;
+    border-radius:23px;
+  }
+  .profile-public-head h2{
+    font-size:24px;
+  }
+  .profile-public-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .resume-paper{
+    padding:24px 20px 30px;
+  }
+  .resume-paper-head h2{
+    font-size:23px;
+  }
+  .resume-list.compact{
+    grid-template-columns:1fr;
+  }
+}
+
+body.native-app .profile-public-card{
+  padding:16px;
+}
+body.native-app .profile-public-head{
+  gap:12px;
+}
+body.native-app .profile-public-avatar{
+  width:76px;
+  height:76px;
+  border-radius:22px;
+}
+body.native-app .profile-public-head h2{
+  font-size:23px;
+}
+body.native-app .profile-public-grid{
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+body.native-app .profile-public-grid>div{
+  padding:11px;
+}
+body.native-app #topAge{
+  display:block!important;
+}
+body.native-app .resume-paper{
+  padding:22px 18px 28px;
+}
+body.native-app .resume-paper-head h2{
+  font-size:22px;
+}
+body.native-app .detail-modal{
+  width:calc(100% - 20px);
+  max-height:82dvh;
+  overflow:auto;
+}
