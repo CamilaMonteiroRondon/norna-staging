@@ -149,3 +149,461 @@ body.dark .brand-image-wrap .norna-wordmark>span{color:#342a27!important}
   .sidebar,body.dark .sidebar{background:rgba(201,187,178,.97)!important}
   .app-footer{margin-top:28px;padding-bottom:10px}
 }
+
+
+/* NORNA native app 2026-10-02 */
+.native-only{display:none!important}
+
+/* Perfil mais visível no topo do site */
+.profile-chip-button{
+  min-height:58px;
+  padding:7px 14px 7px 7px!important;
+  gap:11px!important;
+}
+.top-profile-avatar{
+  width:44px!important;
+  height:44px!important;
+  border-radius:14px!important;
+}
+.profile-chip-copy{
+  gap:2px!important;
+}
+.profile-chip-copy strong{
+  font-size:12px!important;
+  max-width:220px!important;
+}
+.profile-chip-copy small{
+  display:block;
+  font-size:9px!important;
+  line-height:1.25;
+  max-width:230px!important;
+}
+#topAge:empty{display:none}
+
+/* Dashboard: painel, não landing page */
+.dashboard-header-card{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+  padding:18px 20px;
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:rgba(232,222,215,.74);
+}
+.dashboard-header-card h2{
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:26px;
+  font-weight:500;
+  margin:2px 0 4px;
+}
+.dashboard-avatar{
+  width:62px;
+  height:62px;
+  border-radius:18px;
+}
+.dashboard-stats{
+  grid-template-columns:repeat(3,1fr);
+}
+.dashboard-main-grid{align-items:stretch}
+
+/* Currículo simples */
+.resume-workspace{
+  display:grid;
+  grid-template-columns:minmax(240px,.72fr) minmax(0,1.55fr);
+  gap:18px;
+  align-items:start;
+}
+.resume-upload-card{
+  position:sticky;
+  top:22px;
+}
+.resume-upload-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-top:18px;
+  cursor:pointer;
+}
+.resume-file-name{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+.resume-preview-card{
+  min-height:560px;
+}
+.resume-preview-card .card-head{
+  align-items:center;
+  margin-bottom:18px;
+}
+.resume-document{
+  min-height:470px;
+  border-radius:14px;
+  background:#f4ede8;
+  border:1px solid rgba(76,55,49,.12);
+  padding:28px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
+}
+.resume-text-preview{
+  margin:0;
+  white-space:pre-wrap;
+  word-break:break-word;
+  color:#342a27;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:12px;
+  line-height:1.65;
+}
+.resume-empty{
+  min-height:410px;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  text-align:center;
+  gap:8px;
+  color:var(--muted);
+}
+.resume-empty span{
+  font-size:36px;
+  color:#8b615f;
+}
+.resume-empty h3{
+  color:var(--text);
+  font-size:16px;
+}
+.resume-editor-text{
+  min-height:52vh!important;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  line-height:1.55;
+}
+#editResume:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+/* Página própria da IA */
+.ai-page-card{
+  max-width:760px;
+}
+.ai-page-card .ai-answer{
+  min-height:130px;
+  font-size:11px;
+}
+
+/* Android: experiência realmente mobile */
+body.native-app{
+  background:#efe6df!important;
+  min-height:100dvh;
+}
+body.native-app .native-only{display:flex!important}
+body.native-app .app{display:block;min-height:100dvh}
+body.native-app .sidebar{display:none!important}
+body.native-app .content{
+  padding:84px 14px 92px!important;
+  max-width:none;
+  min-height:100dvh;
+}
+body.native-app .content:before{display:none}
+body.native-app .topbar{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:70;
+  height:70px;
+  margin:0!important;
+  padding:10px 14px;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between;
+  gap:8px;
+  background:rgba(239,230,223,.96);
+  border-bottom:1px solid rgba(76,55,49,.10);
+  backdrop-filter:blur(18px);
+}
+body.native-app .topbar>div:first-child{
+  min-width:0;
+}
+body.native-app .topbar>div:first-child span{
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  color:#342a27!important;
+  font-size:18px;
+  letter-spacing:.16em;
+}
+body.native-app .topbar h1{
+  font-size:9px;
+  color:#7b6962;
+  margin-top:1px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:110px;
+}
+body.native-app .top-actions{
+  width:auto!important;
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+body.native-app .logout-btn{display:none}
+body.native-app .native-more-button{
+  width:36px;
+  height:36px;
+  border:1px solid rgba(76,55,49,.12);
+  border-radius:12px;
+  align-items:center;
+  justify-content:center;
+  background:#e8ddd5;
+  color:#725854;
+  font-weight:800;
+  letter-spacing:1px;
+}
+body.native-app .profile-chip-button{
+  min-height:46px!important;
+  padding:4px 8px 4px 4px!important;
+  border-radius:15px!important;
+  max-width:205px;
+}
+body.native-app .top-profile-avatar{
+  width:38px!important;
+  height:38px!important;
+  border-radius:12px!important;
+}
+body.native-app .profile-chip-copy strong{
+  font-size:10px!important;
+  max-width:135px!important;
+}
+body.native-app .profile-chip-copy small{
+  font-size:8px!important;
+  max-width:140px!important;
+}
+body.native-app #topAge{
+  display:none;
+}
+
+body.native-app .page{
+  max-width:none;
+  width:100%;
+}
+body.native-app .intro{
+  margin-bottom:16px;
+}
+body.native-app .intro h2{
+  font-size:27px;
+}
+body.native-app .intro p{
+  font-size:11px;
+}
+body.native-app .card,
+body.native-app .stats article,
+body.native-app .course-card,
+body.native-app .opp-card{
+  border-radius:18px;
+  box-shadow:0 8px 26px rgba(72,49,42,.055);
+}
+body.native-app .card{padding:16px}
+body.native-app .dashboard-header-card{
+  padding:15px;
+  gap:13px;
+  border-radius:20px;
+  background:linear-gradient(135deg,#e8ddd5,#dfd0c7);
+}
+body.native-app .dashboard-header-card h2{
+  font-size:24px;
+}
+body.native-app .dashboard-avatar{
+  width:54px;
+  height:54px;
+  border-radius:17px;
+}
+body.native-app .dashboard-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:8px;
+  margin-bottom:12px;
+}
+body.native-app .dashboard-stats article{
+  padding:12px 10px;
+  min-height:80px;
+}
+body.native-app .dashboard-stats span{
+  font-size:8px;
+  line-height:1.25;
+}
+body.native-app .dashboard-stats strong{
+  font-size:20px;
+  margin-top:8px;
+}
+body.native-app .dashboard-main-grid{
+  grid-template-columns:1fr!important;
+  gap:12px;
+}
+body.native-app .profile-editor{
+  grid-template-columns:1fr!important;
+  gap:14px;
+}
+body.native-app .photo-column{
+  align-items:center!important;
+  padding:4px 0 6px;
+}
+body.native-app .avatar.large{
+  width:112px;
+  height:112px;
+  border-radius:30px;
+}
+body.native-app .form-grid{
+  grid-template-columns:1fr!important;
+  gap:0;
+}
+body.native-app input,
+body.native-app select,
+body.native-app textarea{
+  min-height:44px;
+  border-radius:12px;
+}
+body.native-app .resume-workspace{
+  grid-template-columns:1fr!important;
+  gap:12px;
+}
+body.native-app .resume-upload-card{
+  position:static;
+}
+body.native-app .resume-preview-card{
+  min-height:420px;
+}
+body.native-app .resume-document{
+  min-height:330px;
+  padding:18px;
+  border-radius:16px;
+}
+body.native-app .resume-empty{min-height:290px}
+body.native-app .resume-text-preview{
+  font-size:11px;
+  line-height:1.55;
+}
+body.native-app .opp-card{
+  grid-template-columns:1fr!important;
+}
+body.native-app .score-circle{margin-left:0}
+body.native-app .app-footer{display:none}
+
+/* Barra inferior do APK */
+.native-bottom-nav{
+  display:none;
+}
+body.native-app .native-bottom-nav{
+  position:fixed;
+  z-index:80;
+  left:8px;
+  right:8px;
+  bottom:8px;
+  height:68px;
+  padding:6px 4px max(6px,env(safe-area-inset-bottom));
+  align-items:center;
+  justify-content:space-around;
+  gap:1px;
+  background:rgba(245,238,233,.97);
+  border:1px solid rgba(76,55,49,.12);
+  border-radius:22px;
+  box-shadow:0 14px 40px rgba(65,44,38,.16);
+  backdrop-filter:blur(18px);
+}
+.native-nav-btn{
+  flex:1;
+  min-width:0;
+  height:54px;
+  border:0;
+  border-radius:16px;
+  background:transparent;
+  color:#7b6962;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  padding:3px 1px;
+}
+.native-nav-btn .native-icon{
+  font-size:18px;
+  line-height:1;
+}
+.native-nav-btn small{
+  font-size:7px;
+  font-weight:650;
+  white-space:nowrap;
+}
+.native-nav-btn.active{
+  background:#dfd0c7;
+  color:#6f4d4a;
+}
+
+/* Gaveta "Mais" */
+.native-more-sheet{
+  display:none!important;
+}
+body.native-app .native-more-sheet.open{
+  display:block!important;
+  position:fixed;
+  inset:0;
+  z-index:120;
+}
+.native-sheet-backdrop{
+  position:absolute;
+  inset:0;
+  width:100%;
+  border:0;
+  background:rgba(55,40,35,.28);
+}
+.native-sheet-panel{
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:86px;
+  padding:12px 14px 16px;
+  border-radius:24px;
+  background:#f2e9e3;
+  border:1px solid rgba(76,55,49,.12);
+  box-shadow:0 18px 50px rgba(53,37,32,.22);
+}
+.native-sheet-handle{
+  width:40px;
+  height:4px;
+  border-radius:999px;
+  background:#c8b7ad;
+  margin:0 auto 12px;
+}
+.native-sheet-panel>strong{
+  display:block;
+  font-family:"Iowan Old Style",Baskerville,Georgia,serif;
+  font-size:18px;
+  margin-bottom:12px;
+}
+.native-sheet-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.native-sheet-grid button{
+  min-height:82px;
+  border:1px solid rgba(76,55,49,.10);
+  border-radius:16px;
+  background:#e7dbd3;
+  color:#4f403b;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  font-size:9px;
+}
+.native-sheet-grid button span{
+  font-size:20px;
+  color:#815c58;
+}
+
+@media(max-width:950px){
+  .resume-workspace{grid-template-columns:1fr}
+  .resume-upload-card{position:static}
+}
