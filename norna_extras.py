@@ -870,12 +870,33 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
 
     def jobicy_brazil_provider():
         rows = []
-        params = {
-            "count": 100,
-            "geo": "brazil",
-            "tag": base[:120]
-        }
-        payload = fetch_json("https://jobicy.com/api/v2/remote-jobs?" + urlencode(params))
+
+        # Jobicy is a keyless public API for recent remote jobs.
+        # Try a broad Brazil feed as fallback because a long free-text tag can be too restrictive.
+        attempts = []
+
+        data_text = fold(" ".join([base, role, area, keyword, query]))
+        if any(term in data_text for term in ("dados", "data", "analytics", "machine learning", "python", "sql")):
+            attempts.append({"count": 100, "geo": "brazil", "industry": "data-science"})
+
+        simple_tag = (keyword or query or role or area or "").strip()
+        simple_tag = re.sub(r"\b(junior|júnior|jr\.?|pleno|senior|sênior|sr\.?)\b", "", simple_tag, flags=re.I)
+        simple_tag = re.sub(r"\s+", " ", simple_tag).strip()
+        if simple_tag:
+            attempts.append({"count": 100, "geo": "brazil", "tag": simple_tag[:80]})
+
+        # Broad fallback; relevance filtering happens later inside NORNA.
+        attempts.append({"count": 200, "geo": "brazil"})
+
+        payload = {}
+        for params in attempts:
+            try:
+                candidate = fetch_json("https://jobicy.com/api/v2/remote-jobs?" + urlencode(params))
+            except Exception:
+                continue
+            if candidate.get("jobs"):
+                payload = candidate
+                break
 
         for item in payload.get("jobs", []) or []:
             title = (item.get("jobTitle") or "").strip()
@@ -917,6 +938,7 @@ def search_jobs(query="", keyword="", role="", area="", location="", market="Tod
                 "publication_date": published,
                 "url": link,
                 "remote": True,
+                "workplace_type": "remote",
                 "source": "Jobicy Brasil",
                 "market": "Brasil",
                 "tags": ["Brasil", "remoto", level] + [str(x) for x in types[:3]],
