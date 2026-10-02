@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261001g">
+  <link rel="stylesheet" href="style.css?v=20261002a">
 </head>
 <body>
 <div class="app">
@@ -24,6 +24,7 @@
       <button class="nav-btn" data-page="curriculo">Meu Currículo</button>
       <button class="nav-btn" data-page="vagas">Vagas</button>
       <button class="nav-btn" data-page="formacoes">Formações</button>
+      <button class="nav-btn" data-page="ia">NORNA IA</button>
     </nav>
 
     <div class="sidebar-footer">
@@ -34,29 +35,49 @@
   <main class="content">
     <header class="topbar">
       <div><span>NORNA</span><h1 id="pageTitle">Dashboard</h1></div>
-      <div class="top-actions"><button id="topProfileChip" class="profile-chip profile-chip-button" type="button"><img id="topAvatar" class="avatar small" alt=""><span class="profile-chip-copy"><strong id="topName">Seu perfil</strong><small id="topProfileMeta">Ver meu perfil</small></span></button><button id="logoutButton" class="logout-btn">Sair</button></div>
+      <div class="top-actions">
+        <button id="nativeMoreButton" class="native-more-button native-only" type="button" aria-label="Mais opções">•••</button>
+        <button id="topProfileChip" class="profile-chip profile-chip-button" type="button">
+          <img id="topAvatar" class="avatar top-profile-avatar" alt="">
+          <span class="profile-chip-copy">
+            <strong id="topName">Seu perfil</strong>
+            <small id="topAge"></small>
+            <small id="topProfileMeta">Perfil profissional</small>
+          </span>
+        </button>
+        <button id="logoutButton" class="logout-btn">Sair</button>
+      </div>
     </header>
 
     <section id="page-dashboard" class="page active">
-      <div class="intro dashboard-intro"><span class="label">BEM-VINDA À NORNA</span><h2>Seu caminho profissional, <em>fio por fio.</em></h2><p>A NORNA conecta o que você sabe, seus estudos, currículo e oportunidades — sem transformar sua trajetória em uma lista genérica.</p><div class="dashboard-thread" aria-hidden="true"></div></div>
+      <div class="dashboard-header-card">
+        <img id="dashAvatar" class="avatar dashboard-avatar" alt="">
+        <div>
+          <span class="label">DASHBOARD</span>
+          <h2 id="dashHello">Olá.</h2>
+          <p class="muted">Acompanhe seu perfil e seu próximo passo na NORNA.</p>
+        </div>
+      </div>
 
-      <div class="stats">
+      <div class="stats dashboard-stats">
+        <article><span>Perfil completo</span><strong id="statProfile">0%</strong></article>
+        <article><span>Etapas na jornada</span><strong id="statJourney">0</strong></article>
         <article><span>Competências</span><strong id="statSkills">0</strong></article>
-        <article><span>Cursos</span><strong id="statCourses">0</strong></article>
-        <article><span>Vagas salvas</span><strong id="statJobs">0</strong></article>
-        <article><span>Formações salvas</span><strong id="statLearning">0</strong></article>
       </div>
 
-      <div class="grid2">
-        <article class="card"><span class="label">Objetivo profissional</span><h3 id="dashGoal">Ainda não definido</h3><p id="dashGoalText" class="muted">Complete seu perfil para começar.</p><button class="link-btn go-page" data-go="perfil">Editar perfil</button></article>
-        <article class="card"><span class="label">Próximo passo</span><h3 id="dashNext">Complete seu perfil</h3><p id="dashNextText" class="muted">A NORNA usa os seus próprios dados para organizar as próximas ações.</p></article>
+      <div class="grid2 dashboard-main-grid">
+        <article class="card">
+          <span class="label">Objetivo profissional</span>
+          <h3 id="dashGoal">Ainda não definido</h3>
+          <p id="dashGoalText" class="muted">Complete seu perfil para começar.</p>
+          <button class="link-btn go-page" data-go="perfil">Editar perfil</button>
+        </article>
+        <article class="card">
+          <span class="label">Próximo passo</span>
+          <h3 id="dashNext">Complete seu perfil</h3>
+          <p id="dashNextText" class="muted">A NORNA organiza uma etapa de cada vez.</p>
+        </article>
       </div>
-
-      <article class="card mt"><div class="card-head"><div><span class="label">Compatibilidade</span><h3>Oportunidades mais alinhadas</h3></div><button class="secondary go-page" data-go="vagas">Ver vagas</button></div><div class="grid2 compact"><div class="mini"><span>Melhor vaga salva</span><strong id="bestJob">Nenhuma ainda</strong></div><div class="mini"><span>Melhor formação salva</span><strong id="bestLearning">Nenhuma ainda</strong></div></div></article>
-
-      <article class="card mt"><span class="label">Resumo</span><h3>O que a NORNA já sabe sobre você</h3><div id="dashboardSummary" class="empty-text">Ainda não há dados suficientes.</div></article>
-
-      <article class="card mt ai-card"><div class="card-head"><div><span class="label">NORNA IA</span><h3>Pergunte ao seu próprio perfil</h3></div></div><p class="muted">Use a IA para interpretar seus dados, currículo, competências, cursos e oportunidades.</p><div class="ai-row"><input id="aiQuestion" placeholder="Ex.: o que está faltando no meu perfil para vagas júnior?"><button id="aiAsk" class="primary">Perguntar</button></div><div id="aiAnswer" class="ai-answer">A resposta aparece aqui.</div></article>
     </section>
 
     <section id="page-perfil" class="page">
@@ -73,6 +94,7 @@
           <div>
             <div class="form-grid">
               <div class="field"><label>Nome</label><input id="profileName" placeholder="Seu nome"></div>
+              <div class="field"><label>Idade</label><input id="profileAge" type="number" min="14" max="100" inputmode="numeric" placeholder="Sua idade"></div>
               <div class="field"><label>Área desejada</label><input id="profileArea" placeholder="Ex.: Ciência de Dados"></div>
               <div class="field"><label>Cargo / objetivo</label><input id="profileRole" placeholder="Ex.: Cientista de Dados Júnior"></div>
               <div class="field"><label>Nível atual</label><select id="profileLevel"><option value="">Selecione</option><option>Iniciante</option><option>Júnior</option><option>Pleno</option><option>Sênior</option></select></div>
@@ -111,16 +133,32 @@
     </section>
 
     <section id="page-curriculo" class="page">
-      <div class="intro with-action"><div><h2>Meu Currículo</h2><p>Formação e experiência ficam aqui. A prévia usa Perfil + Currículo + Competências + Cursos.</p></div><button id="downloadResume" class="primary">Baixar currículo</button></div>
-
-      <div class="grid2">
-        <article class="card"><div class="card-head"><div><span class="label">Formação acadêmica</span><h3>Formação</h3></div><button id="addEducation" class="secondary">+ Adicionar</button></div><div id="educationList" class="stack"></div><div id="educationEmpty" class="empty-text">Nenhuma formação cadastrada.</div></article>
-        <article class="card"><div class="card-head"><div><span class="label">Histórico profissional</span><h3>Experiência</h3></div><button id="addExperience" class="secondary">+ Adicionar</button></div><div id="experienceList" class="stack"></div><div id="experienceEmpty" class="empty-text">Nenhuma experiência cadastrada.</div></article>
+      <div class="intro">
+        <h2>Meu Currículo</h2>
+        <p>Envie seu currículo e mantenha uma versão organizada dentro da NORNA.</p>
       </div>
 
-      <div class="grid2 mt">
-        <article class="card"><span class="label">Importar currículo existente</span><h3>Trazer informações para a NORNA</h3><p class="muted">Envie PDF, Word (DOCX), TXT ou MD. A NORNA lê o currículo e preenche automaticamente formação, experiência e competências detectadas para você revisar.</p><div class="field"><textarea id="resumeImport" class="tall" placeholder="Cole o texto do currículo..."></textarea></div><div class="actions"><input id="resumeFile" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"><button id="analyzeResume" class="secondary">Analisar</button></div><div id="resumeImportStatus" class="empty-text"></div></article>
-        <article class="card resume"><span class="label">Prévia automática</span><div id="resumePreview"></div></article>
+      <div class="resume-workspace">
+        <article class="card resume-upload-card">
+          <span class="label">CURRÍCULO</span>
+          <h3>Enviar arquivo</h3>
+          <p class="muted">PDF, DOCX, TXT ou MD. A NORNA lê o conteúdo e atualiza as informações usadas nas recomendações.</p>
+          <input id="resumeFile" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden>
+          <label for="resumeFile" class="primary resume-upload-button">Enviar currículo</label>
+          <p id="resumeFileName" class="resume-file-name">Nenhum currículo enviado.</p>
+          <div id="resumeImportStatus" class="empty-text"></div>
+        </article>
+
+        <article class="card resume resume-preview-card">
+          <div class="card-head">
+            <div>
+              <span class="label">PRÉVIA</span>
+              <h3>Seu currículo</h3>
+            </div>
+            <button id="editResume" class="secondary" type="button">Editar currículo</button>
+          </div>
+          <div id="resumePreview" class="resume-document"></div>
+        </article>
       </div>
     </section>
 
@@ -164,15 +202,54 @@
       <div id="learningEmpty" class="big-empty"><h3>Nenhuma formação salva</h3><p>Pesquise uma opção e salve para comparar depois.</p></div>
       <div class="actions end mt"><button id="addLearning" class="secondary">+ Salvar formação manualmente</button></div>
     </section>
+    <section id="page-ia" class="page">
+      <div class="intro">
+        <h2>NORNA IA</h2>
+        <p>Use seu próprio perfil, currículo, competências e jornada como contexto para fazer perguntas sobre sua carreira.</p>
+      </div>
+      <article class="card ai-card ai-page-card">
+        <span class="label">ASSISTENTE</span>
+        <h3>Pergunte à NORNA</h3>
+        <p class="muted">Ex.: o que está faltando no meu perfil para vagas júnior?</p>
+        <div class="ai-row">
+          <input id="aiQuestion" placeholder="Escreva sua pergunta...">
+          <button id="aiAsk" class="primary">Perguntar</button>
+        </div>
+        <div id="aiAnswer" class="ai-answer">A resposta aparece aqui.</div>
+      </article>
+    </section>
+
     <footer class="app-footer">Feito por Camila Monteiro • 2026</footer>
   </main>
+</div>
+
+<nav id="nativeBottomNav" class="native-bottom-nav native-only" aria-label="Navegação do aplicativo">
+  <button class="native-nav-btn active" data-mobile-page="dashboard" type="button"><span class="native-icon">⌂</span><small>Início</small></button>
+  <button class="native-nav-btn" data-mobile-page="jornada" type="button"><span class="native-icon">◇</span><small>Jornada</small></button>
+  <button class="native-nav-btn" data-mobile-page="curriculo" type="button"><span class="native-icon">▤</span><small>Currículo</small></button>
+  <button class="native-nav-btn" data-mobile-page="vagas" type="button"><span class="native-icon">⌕</span><small>Vagas</small></button>
+  <button class="native-nav-btn" data-mobile-page="ia" type="button"><span class="native-icon">✦</span><small>IA</small></button>
+  <button class="native-nav-btn" data-mobile-page="perfil" type="button"><span class="native-icon">○</span><small>Perfil</small></button>
+</nav>
+
+<div id="nativeMoreSheet" class="native-more-sheet native-only" aria-hidden="true">
+  <button class="native-sheet-backdrop" data-close-native-more type="button" aria-label="Fechar"></button>
+  <div class="native-sheet-panel">
+    <div class="native-sheet-handle"></div>
+    <strong>Mais na NORNA</strong>
+    <div class="native-sheet-grid">
+      <button data-mobile-page="cursos" type="button"><span>▣</span>Meus Cursos</button>
+      <button data-mobile-page="competencias" type="button"><span>◎</span>Competências</button>
+      <button data-mobile-page="formacoes" type="button"><span>△</span>Formações</button>
+    </div>
+  </div>
 </div>
 
 <div id="modal" class="overlay"><div class="modal"><button id="modalClose" class="close">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div><div class="actions end"><button id="modalCancel" class="secondary">Cancelar</button><button id="modalSave" class="primary">Salvar</button></div></div></div>
 <div id="toast" class="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<script src="script.js?v=20261001g"></script>
+<script src="script.js?v=20261002a"></script>
 <script>
       if("serviceWorker" in navigator){
         navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
