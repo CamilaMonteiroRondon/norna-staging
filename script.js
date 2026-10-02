@@ -34,10 +34,10 @@ async function bootstrap(){
 
     // Atualiza uma única vez currículos importados antes da sincronização
     // de competências fortes e cursos automáticos.
-    if(data.resumeText&&Number(data.resumeSyncVersion||0)<3){
+    if(data.resumeText&&Number(data.resumeSyncVersion||0)<4){
       try{
         await analyzeResumeText(data.resumeText,null);
-        data.resumeSyncVersion=3;
+        data.resumeSyncVersion=4;
         await syncData();
       }catch(err){
         console.warn("Não foi possível atualizar automaticamente o currículo antigo.",err);
@@ -353,7 +353,12 @@ function replaceResumeAnalysis(x){
       progress:100,
       source:"resume"
     }));
-  const manualCourses=(data.courses||[]).filter(item=>item?.source!=="resume");
+  const projectNames=new Set((x.projects||[]).map(item=>String(item||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()));
+  const manualCourses=(data.courses||[]).filter(item=>{
+    if(item?.source==="resume")return false;
+    const name=String(item?.name||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+    return !projectNames.has(name);
+  });
   data.courses=dedupeBy([...manualCourses,...resumeCourses],item=>`${item.name||""}|${item.platform||""}`);
 }
 
@@ -438,7 +443,7 @@ async function analyzeResumeText(text,status){
   const j=await r.json();
   if(!r.ok)throw new Error(j.error||"Não foi possível analisar o currículo.");
   replaceResumeAnalysis(j.extracted);
-  data.resumeSyncVersion=3;
+  data.resumeSyncVersion=4;
   if(status)status.textContent=`Currículo lido: ${(j.extracted?.education||[]).length} formação(ões), ${(j.extracted?.experience||[]).length} experiência(s) e ${(j.extracted?.skills||[]).length} competência(s) identificadas.`;
   return j;
 }
