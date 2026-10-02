@@ -8,6 +8,53 @@ const emptyData=()=>({
 let data=load(), currentCourseFilter="Todos", currentJobTab="recommended", currentLearningTab="recommended", recommendedJobs=[], recommendedLearning=[], modalHandler=null, currentUser=null, syncTimer=null;
 document.body.classList.toggle("native-app",IS_NATIVE_APP);
 
+function setupAppThreads(){
+  const canvas=document.getElementById("appThreadCanvas");
+  if(!canvas)return;
+  const ctx=canvas.getContext("2d");
+  let w=0,h=0,dpr=1;
+
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    w=window.innerWidth;
+    h=window.innerHeight;
+    canvas.width=Math.round(w*dpr);
+    canvas.height=Math.round(h*dpr);
+    canvas.style.width=w+"px";
+    canvas.style.height=h+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function curve(yBase,amp,phase,stroke,alpha){
+    ctx.beginPath();
+    ctx.moveTo(-80,yBase+Math.sin(phase)*amp);
+    const y1=yBase+Math.sin(phase+1.1)*amp;
+    const y2=yBase+Math.sin(phase+2.2)*amp;
+    const y3=yBase+Math.sin(phase+3.1)*amp;
+    ctx.bezierCurveTo(w*.24,y1,w*.48,y2,w*.70,y3);
+    ctx.bezierCurveTo(w*.84,yBase+Math.sin(phase+4.1)*amp,w+40,yBase+Math.sin(phase+5.1)*amp,w+90,yBase);
+    ctx.strokeStyle=stroke;
+    ctx.globalAlpha=alpha;
+    ctx.lineWidth=1.15;
+    ctx.stroke();
+  }
+
+  function draw(ms){
+    ctx.clearRect(0,0,w,h);
+    const t=ms/4200;
+    curve(h*.26,38,t,"#a989a4",.20);
+    curve(h*.31,46,-t*.82+1.8,"#c3a6b8",.16);
+    curve(h*.76,54,t*.66+3.2,"#9b7d97",.12);
+    ctx.globalAlpha=1;
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  window.addEventListener("resize",resize,{passive:true});
+  requestAnimationFrame(draw);
+}
+setupAppThreads();
+
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):emptyData()}catch{return emptyData()}}
 function normalizeData(source){const base=emptyData();source=source||{};return {...base,...source,profile:{...base.profile,...(source.profile||{})},education:Array.isArray(source.education)?source.education:[],experience:Array.isArray(source.experience)?source.experience:[],journey:Array.isArray(source.journey)?source.journey:[],courses:Array.isArray(source.courses)?source.courses:[],skills:Array.isArray(source.skills)?source.skills:[],savedJobs:Array.isArray(source.savedJobs)?source.savedJobs:[],savedLearning:Array.isArray(source.savedLearning)?source.savedLearning:[],resumeText:String(source.resumeText||""),resumeFileName:String(source.resumeFileName||""),resumeContact:{...base.resumeContact,...(source.resumeContact||{})},resumeSyncVersion:Number(source.resumeSyncVersion||0)}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));clearTimeout(syncTimer);syncTimer=setTimeout(syncData,220)}
@@ -267,8 +314,33 @@ if(topProfileChip)topProfileChip.onclick=()=>{go("perfil");showProfileEditor(fal
 
 // JORNADA
 document.getElementById("addJourney").onclick=()=>journeyModal();
-function journeyModal(i=null,preset=null){const x=preset||(i===null?{}:data.journey[i]);openModal(i===null?"Adicionar etapa":"Editar etapa",`<div class="field"><label>Etapa</label><input id="mTitle" value="${esc(x.title||"")}"></div><div class="field"><label>Descrição</label><textarea id="mDescription">${esc(x.description||"")}</textarea></div><div class="field"><label>Status</label><select id="mStatus"><option>Não iniciado</option><option>Em andamento</option><option>Concluído</option></select></div>`,()=>{const o={title:val("mTitle"),description:val("mDescription"),status:document.getElementById("mStatus").value};if(!o.title)return alert("Informe a etapa.");if(i===null)data.journey.push(o);else data.journey[i]=o;save();closeModal();renderAll();toast("Etapa salva.")});if(x.status)document.getElementById("mStatus").value=x.status}
-function renderJourney(){const box=document.getElementById("journeyList");box.innerHTML="";data.journey.forEach((x,i)=>{const el=document.createElement("div");el.className="stack-item";el.innerHTML=`<h4>${i+1}. ${esc(x.title)}</h4><p>${esc(x.description||"")}</p><p>${esc(x.status)}</p><div class="item-actions"><button data-jedit="${i}">Editar</button><button class="danger" data-jdel="${i}">Excluir</button></div>`;box.appendChild(el)});document.getElementById("journeyEmpty").classList.toggle("hidden",data.journey.length>0)}
+function journeyModal(i=null,preset=null){
+  const x=preset||(i===null?{}:data.journey[i]);
+  openModal(
+    i===null?"Adicionar meta":"Editar meta",
+    `<div class="field"><label>O que você quer fazer?</label><input id="mTitle" placeholder="Ex.: Concluir curso de SQL" value="${esc(x.title||"")}"></div>
+     <div class="field"><label>Detalhes ou motivo (opcional)</label><textarea id="mDescription" placeholder="Por que isso faz parte do seu próximo passo?">${esc(x.description||"")}</textarea></div>
+     <div class="field"><label>Status</label><select id="mStatus"><option>Não iniciado</option><option>Em andamento</option><option>Concluído</option></select></div>`,
+    ()=>{
+      const o={title:val("mTitle"),description:val("mDescription"),status:document.getElementById("mStatus").value,source:x.source||"manual",courseKey:x.courseKey||""};
+      if(!o.title)return alert("Informe sua meta.");
+      if(i===null)data.journey.push(o);else data.journey[i]=o;
+      save();closeModal();renderAll();toast("Meta salva.");
+    }
+  );
+  if(x.status)document.getElementById("mStatus").value=x.status;
+}
+function renderJourney(){
+  const box=document.getElementById("journeyList");
+  box.innerHTML="";
+  data.journey.forEach((x,i)=>{
+    const el=document.createElement("div");
+    el.className="stack-item";
+    el.innerHTML=`<div class="trail-item-head"><h4>${i+1}. ${esc(x.title)}</h4>${x.source==="course"?'<span class="trail-source">de Meus Cursos</span>':""}</div><p>${esc(x.description||"")}</p><p>${esc(x.status)}</p><div class="item-actions"><button data-jedit="${i}">Editar</button><button class="danger" data-jdel="${i}">Excluir</button></div>`;
+    box.appendChild(el);
+  });
+  document.getElementById("journeyEmpty").classList.toggle("hidden",data.journey.length>0);
+}
 document.getElementById("journeyList").onclick=e=>{const a=e.target.closest("[data-jedit]"),d=e.target.closest("[data-jdel]");if(a)journeyModal(+a.dataset.jedit);if(d&&confirm("Excluir esta etapa?")){data.journey.splice(+d.dataset.jdel,1);save();renderAll()}};
 
 // COMPETÊNCIAS
@@ -307,10 +379,81 @@ document.getElementById("page-competencias").onclick=e=>{const a=e.target.closes
 // CURSOS
 document.getElementById("addCourse").onclick=()=>courseModal();
 function skillOptions(selected=""){return `<option value="">Sem competência relacionada</option>`+data.skills.map(s=>`<option ${s.name===selected?"selected":""}>${esc(s.name)}</option>`).join("")}
-function courseModal(i=null){const x=i===null?{}:data.courses[i];openModal(i===null?"Adicionar curso":"Editar curso",`<div class="field"><label>Nome do curso</label><input id="mName" value="${esc(x.name||"")}"></div><div class="field"><label>Plataforma / instituição</label><input id="mPlatform" value="${esc(x.platform||"")}"></div><div class="field"><label>Link</label><input id="mLink" value="${esc(x.link||"")}"></div><div class="field"><label>Status</label><select id="mStatus"><option>Quero fazer</option><option>Em andamento</option><option>Concluído</option><option>Pausado</option></select></div><div class="field"><label>Competência relacionada</label><select id="mSkill">${skillOptions(x.skill||"")}</select></div><div class="field"><label>Progresso (%)</label><input id="mProgress" type="number" min="0" max="100" value="${x.progress??0}"></div>`,()=>{const o={name:val("mName"),platform:val("mPlatform"),link:val("mLink"),status:document.getElementById("mStatus").value,skill:document.getElementById("mSkill").value,progress:clamp(val("mProgress"))};if(!o.name)return alert("Informe o curso.");if(o.status==="Concluído")o.progress=100;if(o.status==="Quero fazer")o.progress=0;if(i===null)data.courses.push(o);else data.courses[i]=o;save();closeModal();renderAll();toast("Curso salvo.")});if(x.status)document.getElementById("mStatus").value=x.status}
+
+function courseKey(course){
+  return String((course?.name||"")+"|"+(course?.platform||"")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+}
+function syncCourseToTrail(course){
+  if(!course||course.source==="resume")return;
+  const key=courseKey(course);
+  if(!key)return;
+
+  const statusMap={
+    "Quero fazer":"Não iniciado",
+    "Em andamento":"Em andamento",
+    "Concluído":"Concluído",
+    "Pausado":"Não iniciado"
+  };
+  const existing=data.journey.find(x=>x.source==="course"&&x.courseKey===key);
+  const item={
+    title:course.name,
+    description:[course.platform,course.skill?("Competência: "+course.skill):""].filter(Boolean).join(" • "),
+    status:statusMap[course.status]||"Não iniciado",
+    source:"course",
+    courseKey:key
+  };
+
+  if(existing)Object.assign(existing,item);
+  else data.journey.push(item);
+}
+function courseModal(i=null){
+  const x=i===null?{}:data.courses[i];
+  openModal(
+    i===null?"Adicionar curso":"Editar curso",
+    `<div class="field"><label>Nome do curso</label><input id="mName" value="${esc(x.name||"")}"></div>
+     <div class="field"><label>Plataforma / instituição</label><input id="mPlatform" value="${esc(x.platform||"")}"></div>
+     <div class="field"><label>Link</label><input id="mLink" value="${esc(x.link||"")}"></div>
+     <div class="field"><label>Status</label><select id="mStatus"><option>Quero fazer</option><option>Em andamento</option><option>Concluído</option><option>Pausado</option></select></div>
+     <div class="field"><label>Competência relacionada</label><select id="mSkill">${skillOptions(x.skill||"")}</select></div>
+     <div class="field"><label>Progresso (%)</label><input id="mProgress" type="number" min="0" max="100" value="${x.progress??0}"></div>`,
+    ()=>{
+      const oldKey=i===null?"":courseKey(data.courses[i]);
+      const o={
+        name:val("mName"),
+        platform:val("mPlatform"),
+        link:val("mLink"),
+        status:document.getElementById("mStatus").value,
+        skill:document.getElementById("mSkill").value,
+        progress:clamp(val("mProgress")),
+        source:x.source||"manual"
+      };
+      if(!o.name)return alert("Informe o curso.");
+      if(o.status==="Concluído")o.progress=100;
+      if(o.status==="Quero fazer")o.progress=0;
+
+      if(i===null)data.courses.push(o);
+      else data.courses[i]=o;
+
+      // Se o curso mudou de nome/instituição, limpa o vínculo antigo.
+      if(oldKey&&oldKey!==courseKey(o)){
+        data.journey=data.journey.filter(j=>!(j.source==="course"&&j.courseKey===oldKey));
+      }
+      syncCourseToTrail(o);
+
+      save();closeModal();renderAll();toast("Curso salvo e Trilha atualizada.");
+    }
+  );
+  if(x.status)document.getElementById("mStatus").value=x.status;
+}
 function renderCourses(){const arr=data.courses.map((x,i)=>({...x,i})).filter(x=>currentCourseFilter==="Todos"||x.status===currentCourseFilter),box=document.getElementById("courseList");box.innerHTML="";arr.forEach(x=>{const el=document.createElement("article");el.className="course-card";el.innerHTML=`<h3>${esc(x.name)}</h3><p>${esc(x.platform||"Plataforma não informada")}</p><p>${esc(x.status)}</p>${x.skill?`<p>Competência: ${esc(x.skill)}</p>`:""}${["Em andamento","Concluído"].includes(x.status)?`<div class="progress"><span>${x.progress}% concluído</span><div class="track"><div class="fill" style="width:${x.progress}%"></div></div></div>`:""}<div class="course-actions"><button class="open-btn" data-copen="${x.i}">Abrir</button><button class="edit-btn" data-cedit="${x.i}">Editar</button><button class="delete-btn" data-cdel="${x.i}">Excluir</button></div>`;box.appendChild(el)});document.getElementById("courseEmpty").classList.toggle("hidden",arr.length>0);box.classList.toggle("hidden",arr.length===0)}
 document.querySelectorAll(".course-filter").forEach(b=>b.onclick=()=>{document.querySelectorAll(".course-filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentCourseFilter=b.dataset.filter;renderCourses()});
-document.getElementById("courseList").onclick=e=>{const o=e.target.closest("[data-copen]"),a=e.target.closest("[data-cedit]"),d=e.target.closest("[data-cdel]");if(o){const x=data.courses[+o.dataset.copen];if(!x.link)return alert("Este curso não possui link.");window.open(normalUrl(x.link),"_blank","noopener,noreferrer")}if(a)courseModal(+a.dataset.cedit);if(d&&confirm("Excluir este curso?")){data.courses.splice(+d.dataset.cdel,1);save();renderAll()}};
+document.getElementById("courseList").onclick=e=>{const o=e.target.closest("[data-copen]"),a=e.target.closest("[data-cedit]"),d=e.target.closest("[data-cdel]");if(o){const x=data.courses[+o.dataset.copen];if(!x.link)return alert("Este curso não possui link.");window.open(normalUrl(x.link),"_blank","noopener,noreferrer")}if(a)courseModal(+a.dataset.cedit);if(d&&confirm("Excluir este curso?")){
+  const course=data.courses[+d.dataset.cdel];
+  const key=courseKey(course);
+  data.courses.splice(+d.dataset.cdel,1);
+  data.journey=data.journey.filter(j=>!(j.source==="course"&&j.courseKey===key));
+  save();renderAll();
+}};
 
 // CURRÍCULO
 function dedupeBy(items,keyFn){
@@ -622,6 +765,40 @@ document.getElementById("page-vagas").onclick=e=>{
 // FORMAÇÕES / CURSOS RECOMENDADOS
 document.getElementById("addLearning").onclick=()=>learningModal();
 function learningModal(i=null){const x=i===null?{}:data.savedLearning[i];openModal(i===null?"Salvar formação":"Editar formação",`<div class="field"><label>Instituição / plataforma</label><input id="mInstitution" value="${esc(x.institution||"")}"></div><div class="field"><label>Curso / programa</label><input id="mProgram" value="${esc(x.program||"")}"></div><div class="field"><label>Tipo</label><input id="mType" value="${esc(x.type||"")}"></div><div class="field"><label>Modalidade</label><input id="mMode" value="${esc(x.mode||"")}"></div><div class="field"><label>Link</label><input id="mLink" value="${esc(x.link||"")}"></div><div class="field"><label>Nota / estrelas</label><input id="mRating" placeholder="Ex.: 4,7" value="${esc(x.rating||"")}"></div><div class="field"><label>Preço / promoção</label><input id="mPromo" value="${esc(x.promo||"")}"></div><div class="field"><label>Conteúdo / proposta</label><textarea id="mTopics">${esc(x.topics||"")}</textarea></div>`,()=>{const o={institution:val("mInstitution"),program:val("mProgram"),type:val("mType"),mode:val("mMode"),link:val("mLink"),rating:val("mRating"),promo:val("mPromo"),topics:val("mTopics")};if(!o.program)return alert("Informe o curso/programa.");if(i===null)data.savedLearning.push(o);else data.savedLearning[i]=o;save();closeModal();renderAll();toast("Formação salva.")})}
+async function openLearningDetails(x){
+  if(!x)return;
+  openDetailModal(x.program,learningDetailBody(x),x.link,"Abrir site oficial");
+  const body=document.getElementById("detailModalBody");
+  const loading=document.createElement("section");
+  loading.className="detail-section detail-live-loading";
+  loading.innerHTML="<h3>Preço e avaliação</h3><p>Buscando informações públicas atualizadas...</p>";
+  body.appendChild(loading);
+
+  try{
+    const params=new URLSearchParams({program:x.program||"",institution:x.institution||"",link:x.link||""});
+    const r=await fetch("/api/learning/details?"+params.toString());
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||"Não foi possível consultar detalhes.");
+
+    const priceText=j.price?.label||"Faixa de preço não encontrada nas fontes consultadas.";
+    const ratingText=j.rating?.label||"Avaliação pública confiável não encontrada.";
+    const quality=j.rating?.quality||"";
+    const sources=(j.sources||[]).slice(0,4).map(src=>`<a href="${esc(normalUrl(src.link||""))}" target="_blank" rel="noopener noreferrer">${esc(src.name||"Fonte")}</a>`).join("");
+
+    loading.innerHTML=`
+      <h3>Preço e avaliação</h3>
+      <div class="learning-detail-facts">
+        <div><span>Preço / mensalidade</span><strong>${esc(priceText)}</strong></div>
+        <div><span>Avaliação encontrada</span><strong>${esc(ratingText)}</strong>${quality?`<small>${esc(quality)}</small>`:""}</div>
+      </div>
+      ${j.note?`<p class="detail-note">${esc(j.note)}</p>`:""}
+      ${sources?`<p class="detail-sources">Fontes consultadas: ${sources}</p>`:""}
+    `;
+  }catch(err){
+    loading.innerHTML=`<h3>Preço e avaliação</h3><p>${esc(err.message||"Não foi possível consultar agora.")}</p>`;
+  }
+}
+
 function learningDetailBody(x){
   const m=matchInfo(`${x.program} ${x.type||""} ${x.topics||""}`);
   return `
@@ -683,7 +860,7 @@ document.getElementById("page-formacoes").onclick=e=>{
 
   if(detail){
     const x=data.savedLearning[+detail.dataset.learnDetail];
-    if(x)openDetailModal(x.program,learningDetailBody(x),x.link,"Abrir site oficial");
+    if(x)openLearningDetails(x);
   }
   if(journey){
     const x=data.savedLearning[+journey.dataset.learnJourney];
@@ -696,7 +873,7 @@ document.getElementById("page-formacoes").onclick=e=>{
   }
   if(recDetail){
     const x=recommendedLearning[+recDetail.dataset.recLearnDetail];
-    if(x)openDetailModal(x.program,learningDetailBody(x),x.link,"Abrir site oficial");
+    if(x)openLearningDetails(x);
   }
   if(recSave){
     const x=recommendedLearning[+recSave.dataset.recLearnSave];
