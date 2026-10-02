@@ -221,7 +221,7 @@ def analyze_resume(text):
     skills = []
     for skill in KNOWN_SKILLS:
         if contains_term(text, skill):
-            skills.append({"name": skill, "level": 40})
+            skills.append({"name": skill, "level": 85})
     skills = clean_resume_items(skills, ["name"])
 
     # Formação: prioriza a seção correta. Cursos/certificações ficam separados.
