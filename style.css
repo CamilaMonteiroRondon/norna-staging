@@ -1629,3 +1629,106 @@ body.native-app .native-wordmark svg{
   35%{transform:translate(-3px,4px) rotate(-1.3deg) scaleX(.985)}
   70%{transform:translate(2px,-3px) rotate(.8deg) scaleX(1.02)}
 }
+
+
+/* Android app final proportion + navigation fix */
+body.native-app{
+  --bg:#eee7ed;
+  --surface:#f8f3f7;
+  --surface2:#ece3eb;
+  background:
+    radial-gradient(circle at 82% 10%,rgba(166,132,160,.15),transparent 28%),
+    linear-gradient(145deg,#f1ebf0 0%,#e9e1e8 55%,#e3d9e2 100%)!important;
+}
+body.native-app .topbar{
+  padding:calc(max(24px,env(safe-area-inset-top)) + 8px) 18px 13px!important;
+  min-height:88px!important;
+  background:rgba(240,233,239,.95)!important;
+}
+body.native-app .content{
+  padding:calc(102px + env(safe-area-inset-top)) 14px calc(100px + env(safe-area-inset-bottom))!important;
+}
+body.native-app .native-profile-card{
+  min-height:76px;
+  margin:0 0 18px;
+  padding:11px 13px;
+  background:rgba(248,243,247,.88)!important;
+  border-radius:20px;
+}
+body.native-app .native-profile-avatar{
+  width:50px!important;height:50px!important;flex-basis:50px;border-radius:16px!important;
+}
+body.native-app .native-profile-copy strong{font-size:13px}
+body.native-app .native-profile-copy small{font-size:9px}
+body.native-app .page.active{
+  animation:nornaPageIn .28s cubic-bezier(.2,.78,.28,1);
+  transform-origin:50% 12%;
+}
+@keyframes nornaPageIn{
+  from{opacity:0;transform:translateY(10px) scale(.992)}
+  to{opacity:1;transform:none}
+}
+body.native-app .native-bottom-nav{
+  height:72px!important;
+  left:7px!important;right:7px!important;
+  padding:6px 3px!important;
+  border-radius:24px!important;
+  background:rgba(244,238,243,.98)!important;
+  border:1px solid rgba(94,73,94,.13)!important;
+  box-shadow:0 12px 34px rgba(70,52,71,.18)!important;
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  align-items:center!important;
+}
+body.native-app .native-nav-btn{
+  width:100%!important;height:58px!important;min-width:0!important;
+  border:0!important;background:transparent!important;
+  color:#7b6c79!important;border-radius:16px!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
+  padding:4px 0!important;transition:.2s ease!important;
+}
+body.native-app .native-nav-btn .native-icon{
+  width:21px!important;height:21px!important;
+  fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important;
+}
+body.native-app .native-more-nav-btn .native-icon circle{fill:currentColor!important;stroke:none!important}
+body.native-app .native-nav-btn small{font-size:6.8px!important;font-weight:700!important;line-height:1!important}
+body.native-app .native-nav-btn.active{
+  background:#e6dbe4!important;
+  color:#675164!important;
+  box-shadow:inset 0 0 0 1px rgba(103,81,100,.05);
+}
+body.native-app #nativeMoreSheet{
+  display:none!important;
+}
+body.native-app #nativeMoreSheet.open{
+  display:block!important;position:fixed!important;inset:0!important;z-index:220!important;
+}
+body.native-app #nativeMoreSheet .native-sheet-backdrop{
+  position:absolute!important;inset:0!important;border:0!important;background:rgba(48,40,50,.28)!important;
+}
+body.native-app #nativeMoreSheet .native-sheet-panel{
+  position:absolute!important;left:12px!important;right:12px!important;
+  bottom:calc(90px + env(safe-area-inset-bottom))!important;
+  padding:12px 14px 16px!important;border-radius:24px!important;
+  background:#f3edf2!important;border:1px solid rgba(94,73,94,.14)!important;
+  box-shadow:0 18px 52px rgba(55,42,57,.24)!important;
+  animation:nornaSheetIn .22s ease-out;
+}
+@keyframes nornaSheetIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+body.native-app #nativeMoreSheet .native-sheet-panel>strong{font-size:17px;color:#443946}
+body.native-app #nativeMoreSheet .native-sheet-grid{grid-template-columns:repeat(2,1fr)!important;gap:9px!important}
+body.native-app #nativeMoreSheet .native-sheet-grid button{
+  min-height:74px!important;border-radius:18px!important;background:#e9e0e7!important;color:#534554!important;
+  border:1px solid rgba(94,73,94,.10)!important;font-size:9px!important;
+}
+body.native-app #nativeMoreSheet .native-sheet-grid button span{font-size:21px!important;color:#765e72!important}
+body.native-app .card,
+body.native-app .stats article,
+body.native-app .course-card,
+body.native-app .opp-card,
+body.native-app .profile-public-grid>div,
+body.native-app .skill-compact{
+  background:rgba(248,243,247,.88)!important;
+  border-color:rgba(94,73,94,.11)!important;
+}
