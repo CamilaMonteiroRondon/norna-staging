@@ -160,17 +160,19 @@ function openNativeMore(){
   nativeMoreSheet.classList.add("open");
   nativeMoreSheet.setAttribute("aria-hidden","false");
   nativeBottomMore?.classList.add("active");
+  nativeBottomMore?.setAttribute("aria-expanded","true");
 }
 function closeNativeMore(){
   if(!nativeMoreSheet)return;
   nativeMoreSheet.classList.remove("open");
   nativeMoreSheet.setAttribute("aria-hidden","true");
   nativeBottomMore?.classList.remove("active");
+  nativeBottomMore?.setAttribute("aria-expanded","false");
 }
 const nativeBottomMore=document.getElementById("nativeBottomMore");
 if(nativeBottomMore)nativeBottomMore.onclick=e=>{
   e.stopPropagation();
-  openNativeMore();
+  nativeMoreSheet?.classList.contains("open")?closeNativeMore():openNativeMore();
 };
 document.querySelectorAll("[data-close-native-more]").forEach(b=>b.onclick=closeNativeMore);
 
